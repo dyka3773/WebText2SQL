@@ -1,1 +1,3 @@
 # WebText2SQL
+
+This is a project performed as part of my BE thesis at the International Hellenic University. The project focuses on the development of WebText2SQL, a web-based application that allows users to formulate SQL queries using natural language. Using a Large Language Model (LLM), the application will automatically generate the corresponding SQL code and execute it against a Database Management System (DBMS). The system aims to allow users to execute queries through a friendly web interface to retrieve information without the need for SQL knowledge. In addition, the project will also examine aspects of accuracy, efficiency, and usability of the application.
