@@ -172,3 +172,18 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# VS Code settings
+.vscode/settings.json
+
+# Database files
+*.db
+*.sqlite3
+*.sqlite3-journal
+*.db-journal
+*.db-journal-*
+
+# Chainlit files
+.chainlit/
+.files/
+chainlit.md
