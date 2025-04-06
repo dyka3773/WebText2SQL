@@ -1,10 +1,5 @@
 import sqlite3 as sql
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
-
-connection = sql.connect(os.getenv('DATABASE_URL'))
 
 def fetch_data(query, connection) -> list:
     """
@@ -14,15 +9,9 @@ def fetch_data(query, connection) -> list:
         query (str): SQL query to execute.
         connection (sqlite3.Connection): SQLite connection object.
 
-    Raises:
-        ValueError: If the query does not end with a semicolon.
-
     Returns:
         list: List of tuples containing the fetched data.
     """
-    if not query.strip().endswith(';'):
-        raise ValueError("SQL query must end with a semicolon.")
-
     try:
         cursor = connection.cursor()
         cursor.execute(query)
@@ -33,3 +22,33 @@ def fetch_data(query, connection) -> list:
         print(f"An error occurred: {e}")
     finally:
         cursor.close()
+
+
+def get_db_metadata(connection) -> dict:
+    """
+    Retrieve the metadata of the database.
+    
+    Parameters:
+        connection (sqlite3.Connection): SQLite connection object.
+
+    Returns:
+        dict: A dictionary where keys are table names and values are lists of column names.
+    """
+    cursor = connection.cursor()
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+    tables = cursor.fetchall()
+
+    metadata = {}
+    for table in tables:
+        try:
+            table_name = table[0]
+            cursor.execute(f"PRAGMA table_info({table_name});")
+            columns = cursor.fetchall()
+            metadata[table_name] = [column[1] for column in columns]
+        except sql.Error as e:
+            print(f"An error occurred while fetching metadata for table {table_name}: {e}")
+            continue
+        finally:
+            cursor.close()
+
+    return metadata
