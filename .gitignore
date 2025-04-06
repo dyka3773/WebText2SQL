@@ -184,6 +184,6 @@ cython_debug/
 *.db-journal-*
 
 # Chainlit files
-.chainlit/
+# .chainlit/
 .files/
-chainlit.md
+# chainlit.md
