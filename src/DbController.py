@@ -20,6 +20,7 @@ def fetch_data(query, connection) -> list:
         return results
     except sql.Error as e:
         print(f"An error occurred: {e}")
+        # TODO: In case of an sql error, we should return it to the user instead of printing it.
     finally:
         cursor.close()
 
