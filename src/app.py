@@ -14,7 +14,7 @@ cl.instrument_openai()
 client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
-connection = sql.connect(os.getenv('DATABASE_URL'))
+connection = sql.connect(os.getenv('TARGET_DATABASE_URL'))
 
 settings = {
     "model": "gpt-4o-mini",
