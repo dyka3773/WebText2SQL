@@ -21,6 +21,43 @@ settings = {
     "model": "gpt-4o-mini",
 }
 
+@cl.action_callback("db_selection_btn")
+async def on_action(action):
+    """
+    Handle the action when a database is selected by the user.
+    This function is triggered when the user clicks on a database selection button.
+
+    Parameters:
+        action (cl.Action): The action object containing the selected database information.
+    """
+    # Step 1: Get the selected database name from the action payload
+    db_name = action.payload["value"]
+    
+    # Step 2: Connect to the selected database and store the connection as a context variable for this user
+    # connection = db_controller.connect_to_db(db_name)  # TODO: Implement this function
+    cl.user_session.set("db_connection", connection)  # Store the connection in the user session
+    
+    # Step 3: Send a message to the user confirming the selection
+    await cl.Message(
+        content=f"You have selected the database: \n**{db_name}**\n\nNow you can ask me any question about this database, and I will provide you with the SQL query to get the answer."
+    ).send()
+
+
+@cl.on_chat_start
+async def present_the_available_dbs_to_user():
+    """
+    Present the available databases to the user when the chat starts.
+    This function is triggered when a new chat session begins.
+    """
+    # Step 1: Get the list of available databases from the database controller
+    # db_list = db_controller.get_available_dbs(user, password) # TODO: Implement this function
+    db_list = ["db1", "db2", "db3"]  # Placeholder for the actual database list
+    
+    action_btns: list[cl.Action] = [
+        cl.Action(name="db_selection_btn", payload={"value": f"{db_name}"}, label=f"Choose {db_name}") for db_name in db_list
+    ]
+    
+    await cl.Message(content="Please choose a database to work with before sending any messages:", actions=action_btns).send()
 
 @cl.on_message
 async def handle_message(message: cl.Message):
