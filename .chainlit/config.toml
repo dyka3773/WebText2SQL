@@ -2,7 +2,6 @@
 # Whether to enable telemetry (default: true). No personal data is collected.
 enable_telemetry = true
 
-
 # List of environment variables to be provided by each user to use the app.
 user_env = []
 
@@ -48,7 +47,7 @@ edit_message = true
     # Note: Using "*/*" is not recommended as it may cause browser warnings
     accept = ["*/*"]
     max_files = 20
-    max_size_mb = 500
+    max_size_mb = 20
 
 [features.audio]
     # Sample rate of the audio
