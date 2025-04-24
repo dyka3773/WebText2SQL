@@ -21,6 +21,26 @@ settings = {
     "model": "gpt-4o-mini",
 }
 
+@cl.password_auth_callback
+def auth_callback(username: str, password: str) -> cl.User | None:
+    """
+    Authenticate the user using a username and password.
+    This function is called when the user tries to access the app.
+
+    Parameters:
+        username (str): The username provided by the user.
+        password (str): The password provided by the user.
+
+    Returns:
+        cl.User | None: Returns a User object if authentication is successful, otherwise None.
+    """
+    if (username, password) == ("admin", "admin"):
+        return cl.User(
+            identifier="admin", metadata={"role": "admin", "provider": "credentials"}
+        )
+    else:
+        return None
+    
 
 @cl.on_message
 async def handle_message(message: cl.Message):
