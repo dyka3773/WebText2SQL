@@ -20,9 +20,9 @@ def extract_sql_only(string: str) -> str:
     
     # Apply each filter function to the response string
     for filter_func in list_of_filters:
-        response_str = filter_func(response_str)
+        string = filter_func(string)
     
-    return response_str
+    return string
 
 def _remove_sql_tags(string: str) -> str:
     """
