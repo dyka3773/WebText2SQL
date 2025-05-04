@@ -21,6 +21,37 @@ settings = {
     "model": "gpt-4o-mini",
 }
 
+@cl.password_auth_callback
+def auth_callback(username: str, password: str) -> cl.User | None:
+    """
+    Authenticate the user based on the provided username and password.
+    This function is called when a user tries to log in to the application.
+    
+    Parameters:
+        username (str): The username provided by the user.
+        password (str): The password provided by the user.
+        
+    Returns:
+        cl.User: An instance of the User class if authentication is successful, None otherwise.
+    """
+    # TODO: Use the credentials of the db server they want to connect to
+    if (username, password) == ("admin", "admin"):
+        return cl.User(
+            identifier="admin", metadata={"role": "admin", "provider": "credentials"}
+        )
+    else:
+        return None
+
+@cl.on_chat_resume
+async def on_chat_resume(thread):
+    """
+    Handle the event when a chat is resumed.
+    This function is triggered when a user resumes a chat session.
+    
+    Parameters:
+        thread: The thread object representing the chat session.
+    """
+    pass
 
 @cl.on_message
 async def handle_message(message: cl.Message):
