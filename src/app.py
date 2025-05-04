@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 import os
 import sqlite3 as sql
 
-import DbController
+import db_controller
+import str_manipulation
 
 
 load_dotenv()
@@ -31,7 +32,7 @@ async def handle_message(message: cl.Message):
         message (cl.Message): The incoming message object.
     """
     # Step 1: Find Metadata from db
-    metadata: dict = DbController.get_db_metadata(connection)
+    metadata: dict = db_controller.get_db_metadata(connection)
     meta_str = "\n".join([f"{table}: {', '.join(columns)}" for table, columns in metadata.items()])
 
     template = f"""This is my db structure: 
@@ -51,8 +52,16 @@ async def handle_message(message: cl.Message):
     )
 
     # Step 4: Execute the SQL query against the database
-    sql_query = ai_response.choices[0].message.content.strip()
-    results = DbController.fetch_data(sql_query, connection)
+    response_str = ai_response.choices[0].message.content.strip()
+    
+    sql_query = str_manipulation.extract_sql_only(response_str)
+    if not sql_query:
+        await cl.Message(
+            content="The AI model did not return a valid SQL query."
+        ).send()
+        return
+    
+    results = db_controller.fetch_data(sql_query, connection)
 
     # Step 5: Format the data into a user-friendly format before and sending it back to the user
     if not results:
