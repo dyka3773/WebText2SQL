@@ -1,4 +1,7 @@
 from typing import Callable
+import logging
+
+logger = logging.getLogger("webtext2sql")
 
 
 def extract_sql_only(string: str) -> str:
@@ -19,7 +22,11 @@ def extract_sql_only(string: str) -> str:
     ]
     
     # Apply each filter function to the response string
+    logger.debug(f"Applying filters to the string: {string}")
+    logger.debug(f"Filters to be applied: {list_of_filters}")
+    
     for filter_func in list_of_filters:
+        logger.debug(f"Applying filter: {filter_func.__name__}")
         string = filter_func(string)
     
     return string
@@ -34,7 +41,7 @@ def _remove_sql_tags(string: str) -> str:
     Returns:
         str: The string without SQL tags.
     """
-    # Remove SQL tags (e.g., "```sql" and "```")
+    logger.debug(f"Removing SQL tags ('```sql' and '```') from the string: {string}")
     string = string.replace("```sql", "").replace("```", "").strip()
     
     return string
@@ -49,7 +56,7 @@ def _remove_empty_lines(string: str) -> str:
     Returns:
         str: The string without empty lines.
     """
-    # Split the string into lines and filter out empty lines
+    logger.debug(f"Filtering out empty lines from the string: {string}")
     lines = [line.strip() for line in string.split("\n")]
     lines = [line for line in lines if line]  # Remove empty lines
     

@@ -1,4 +1,7 @@
 import sqlite3 as sql
+import logging
+
+logger = logging.getLogger("webtext2sql")
 
 
 def fetch_data(query, connection) -> list:
@@ -14,12 +17,15 @@ def fetch_data(query, connection) -> list:
     """
     try:
         cursor = connection.cursor()
+        
+        logger.debug(f"Executing query: {query}")
+        
         cursor.execute(query)
         results = cursor.fetchall()
 
         return results
     except sql.Error as e:
-        print(f"An error occurred: {e}")
+        logger.error(f"An error occurred: {e}")
         # TODO: In case of an sql error, we should return it to the user instead of printing it.
     finally:
         cursor.close()
@@ -36,20 +42,26 @@ def get_db_metadata(connection) -> dict:
         dict: A dictionary where keys are table names and values are lists of column names.
     """
     cursor = connection.cursor()
+    logger.debug("Fetching database metadata")
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = cursor.fetchall()
 
     metadata = {}
+    
     for table in tables:
         try:
             table_name = table[0]
+            
+            logger.debug(f"Fetching metadata for table: {table_name}")
+            
             cursor.execute(f"PRAGMA table_info({table_name});")
             columns = cursor.fetchall()
             metadata[table_name] = [column[1] for column in columns]
+            
         except sql.Error as e:
-            print(f"An error occurred while fetching metadata for table {table_name}: {e}")
+            logger.error(f"An error occurred while fetching metadata for table {table_name}: {e}")
             continue
-        finally:
-            cursor.close()
+    
+    cursor.close()
 
     return metadata
