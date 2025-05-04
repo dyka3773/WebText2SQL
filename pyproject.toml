@@ -5,7 +5,9 @@ description = "This is a project performed as part of my BE thesis at the Intern
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "aiohttp>=3.11.18",
     "asyncpg>=0.30.0",
+    "azure-storage-blob>=12.25.1",
     "chainlit>=2.5.5",
     "openai>=1.77.0",
 ]
