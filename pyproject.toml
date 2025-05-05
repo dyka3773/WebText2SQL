@@ -10,10 +10,16 @@ dependencies = [
     "azure-storage-blob>=12.25.1",
     "chainlit>=2.5.5",
     "openai>=1.77.0",
+    "psycopg[binary]>=3.2.7",
 ]
 
 [dependency-groups]
 dev = [
-    "psycopg2>=2.9.10",
     "pytest>=8.3.5",
+]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+addopts = [
+    "--import-mode=importlib",
 ]

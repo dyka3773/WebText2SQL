@@ -4,6 +4,12 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- CreateEnum
 CREATE TYPE "StepType" AS ENUM ('assistant_message', 'embedding', 'llm', 'retrieval', 'rerank', 'run', 'system_message', 'tool', 'undefined', 'user_message');
 
+DROP TABLE IF EXISTS "Element";
+DROP TABLE IF EXISTS "Feedback";
+DROP TABLE IF EXISTS "Step";
+DROP TABLE IF EXISTS "Thread";
+DROP TABLE IF EXISTS "User";
+
 -- CreateTable
 CREATE TABLE "Element" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),

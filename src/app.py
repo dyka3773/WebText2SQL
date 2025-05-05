@@ -2,7 +2,8 @@ import chainlit as cl
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 import os
-import sqlite3 as sql
+import psycopg as sql
+
 
 import custom_logging
 logger = custom_logging.setup_logger("webtext2sql")
@@ -19,9 +20,6 @@ cl.instrument_openai()
 client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
-
-# TODO: To be moved in the auth callback
-connection = sql.connect(os.getenv('TARGET_DATABASE_URL'))
 
 settings = {
     "model": "gpt-4o-mini",
@@ -45,8 +43,15 @@ def auth_callback(username: str, password: str) -> cl.User | None:
     # TODO: Use the credentials of the db server they want to connect to
     if (username, password) == ("admin", "admin"):
         logger.debug(f"User {username} authenticated successfully")
+        
+        try:
+            connection = sql.connect(os.getenv('TARGET_DATABASE_URL'))
+        except sql.Error as e:
+            logger.error(f"Error connecting to the database: {e}")
+            return None
+        
         return cl.User(
-            identifier="admin", metadata={"role": "admin", "provider": "credentials"}
+            identifier="admin", metadata={"conn_info": connection.info.get_parameters(), "password": connection.info.password},
         )
     else:
         return None
@@ -61,7 +66,53 @@ async def on_chat_resume(thread: dict):
         thread: The thread object representing the chat session.
     """
     logger.debug(f"Chat resumed: {thread['id']} by User: {thread['userId']}")
-    pass
+
+@cl.on_chat_start
+async def on_chat_start():
+    """
+    Present the available databases to the user when the chat starts.
+    This function is triggered when a new chat session begins.
+    
+    Parameters:
+        thread: The thread object representing the chat session.
+    """
+    logger.debug(f"Chat started by User: {cl.user_session.get('user').identifier}")
+    # Step 1: Get the list of available databases from the database controller
+    user = cl.user_session.get("user").metadata["conn_info"]["user"]
+    conn_info, password = cl.user_session.get("user").metadata["conn_info"], cl.user_session.get("user").metadata["password"]
+    conn_info["password"] = password
+    connection = sql.connect(**conn_info)
+    
+    logger.debug(f"Connected to the database with connection info: {conn_info}")
+    
+    db_list = db_controller.get_available_dbs(connection, user)
+
+    action_btns: list[cl.Action] = [
+        cl.Action(name=f"{db_name} Queries", payload={"value": db_name}, label=f"Choose {db_name}") for db_name in db_list
+    ]
+
+    # Step 2: Send a blocking message to the user with the list of available databases
+    res = await cl.AskActionMessage(
+        content="Please choose a database schema to work with before sending any messages:", 
+        actions=action_btns
+    ).send()
+
+    # Step 3: Get the selected database name from the action payload
+    schema_to_work_with = res.get("payload").get("value")
+    if schema_to_work_with:
+        # Step 4: Set the selected schema as a context variable for this user
+        cl.user_session.set("db_schema", schema_to_work_with)
+
+        # Step 5: Send a message to the user confirming the selection
+        await cl.Message(
+            content=f"You have selected the schema: \n**{schema_to_work_with}**\n\nNow you can ask me any question about this database, and I will provide you with the SQL query to get the answer."
+        ).send()
+    else:
+        await cl.Message(
+            content="No database selected. Please choose a database to work with."
+        ).send()
+    
+
 
 @cl.on_message
 async def handle_message(message: cl.Message):
@@ -74,9 +125,25 @@ async def handle_message(message: cl.Message):
     """
     logger.debug(f"Received message: {message.content}")
     
-    # Step 1: Find Metadata from db
+    # Step 1: Find Metadata from db according to the user
+    conn_info, password = cl.user_session.get("user").metadata["conn_info"], cl.user_session.get("user").metadata["password"]
+    conn_info["password"] = password
+    
+    schema = cl.user_session.get("db_schema")
+    
+    if not conn_info or not password:
+        logger.error("No database connection found in user metadata.")
+        await cl.Message(
+            content="No database connection found. Please log in again."
+        ).send()
+        return
+    else:
+        logger.info(f"Using connection info: {conn_info}") # TODO: Remove this later, it's a security risk
+        connection = sql.connect(**conn_info)
+        logger.debug(f"Connected to the database with connection info: {conn_info}")
+    
     logger.debug(f"Fetching metadata from the database")
-    metadata: dict = db_controller.get_db_metadata(connection)
+    metadata: dict = db_controller.get_db_metadata(connection, schema, conn_info["user"])
     meta_str = "\n".join([f"{table}: {', '.join(columns)}" for table, columns in metadata.items()])
 
     template = f"""This is my db structure: 
@@ -84,6 +151,8 @@ async def handle_message(message: cl.Message):
     
     Please answer only with the SQL query (without any text formatting) that answers the following question:
     {message.content}
+    
+    Keep in mind that the database is a PostgreSQL database and that the schema is {schema} and it should be used in the SQL query.
     """
     # Step 2: Send user's query and metadata to AI
 
