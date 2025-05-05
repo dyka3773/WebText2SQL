@@ -17,3 +17,9 @@ dev = [
     "psycopg2>=2.9.10",
     "pytest>=8.3.5",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+addopts = [
+    "--import-mode=importlib",
+]

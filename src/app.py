@@ -2,7 +2,8 @@ import chainlit as cl
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 import os
-import sqlite3 as sql
+import psycopg2 as sql
+
 
 import custom_logging
 logger = custom_logging.setup_logger("webtext2sql")
@@ -19,9 +20,6 @@ cl.instrument_openai()
 client = AsyncOpenAI(
     api_key=os.getenv("OPENAI_API_KEY")
 )
-
-# TODO: To be moved in the auth callback
-connection = sql.connect(os.getenv('TARGET_DATABASE_URL'))
 
 settings = {
     "model": "gpt-4o-mini",
@@ -45,8 +43,10 @@ def auth_callback(username: str, password: str) -> cl.User | None:
     # TODO: Use the credentials of the db server they want to connect to
     if (username, password) == ("admin", "admin"):
         logger.debug(f"User {username} authenticated successfully")
+        connection = sql.connect(os.getenv('TARGET_DATABASE_URL'))
+        
         return cl.User(
-            identifier="admin", metadata={"role": "admin", "provider": "credentials"}
+            identifier="admin", metadata={"connection": connection}
         )
     else:
         return None
@@ -74,7 +74,16 @@ async def handle_message(message: cl.Message):
     """
     logger.debug(f"Received message: {message.content}")
     
-    # Step 1: Find Metadata from db
+    # Step 1: Find Metadata from db according to the user
+    connection = message.user.metadata["connection"]
+    
+    if not connection:
+        logger.error("No database connection found in user metadata.")
+        await cl.Message(
+            content="No database connection found. Please log in again."
+        ).send()
+        return
+    
     logger.debug(f"Fetching metadata from the database")
     metadata: dict = db_controller.get_db_metadata(connection)
     meta_str = "\n".join([f"{table}: {', '.join(columns)}" for table, columns in metadata.items()])

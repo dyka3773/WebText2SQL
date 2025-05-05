@@ -2,7 +2,7 @@
 -- Data for Name: categories; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.categories VALUES
+INSERT INTO northwind.categories VALUES
 	(1, 'Beverages', 'Soft drinks, coffees, teas, beers, and ales', '\x'),
 	(2, 'Condiments', 'Sweet and savory sauces, relishes, spreads, and seasonings', '\x'),
 	(3, 'Confections', 'Desserts, candies, and sweet breads', '\x'),
@@ -23,7 +23,7 @@ INSERT INTO public.categories VALUES
 -- Data for Name: customers; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.customers VALUES
+INSERT INTO northwind.customers VALUES
 	('ALFKI', 'Alfreds Futterkiste', 'Maria Anders', 'Sales Representative', 'Obere Str. 57', 'Berlin', NULL, '12209', 'Germany', '030-0074321', '030-0076545'),
 	('ANATR', 'Ana Trujillo Emparedados y helados', 'Ana Trujillo', 'Owner', 'Avda. de la Constitución 2222', 'México D.F.', NULL, '05021', 'Mexico', '(5) 555-4729', '(5) 555-3745'),
 	('ANTON', 'Antonio Moreno Taquería', 'Antonio Moreno', 'Owner', 'Mataderos  2312', 'México D.F.', NULL, '05023', 'Mexico', '(5) 555-3932', NULL),
@@ -127,7 +127,7 @@ INSERT INTO public.customers VALUES
 -- Data for Name: employees; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.employees VALUES
+INSERT INTO northwind.employees VALUES
 	(2, 'Fuller', 'Andrew', 'Vice President, Sales', 'Dr.', '1952-02-19', '1992-08-14', '908 W. Capital Way', 'Tacoma', 'WA', '98401', 'USA', '(206) 555-9482', '3457', '\x', 'Andrew received his BTS commercial in 1974 and a Ph.D. in international marketing from the University of Dallas in 1981.  He is fluent in French and Italian and reads German.  He joined the company as a sales representative, was promoted to sales manager in January 1992 and to vice president of sales in March 1993.  Andrew is a member of the Sales Management Roundtable, the Seattle Chamber of Commerce, and the Pacific Rim Importers Association.', NULL, 'http://accweb/emmployees/fuller.bmp'),
 	(3, 'Leverling', 'Janet', 'Sales Representative', 'Ms.', '1963-08-30', '1992-04-01', '722 Moss Bay Blvd.', 'Kirkland', 'WA', '98033', 'USA', '(206) 555-3412', '3355', '\x', 'Janet has a BS degree in chemistry from Boston College (1984).  She has also completed a certificate program in food retailing management.  Janet was hired as a sales associate in 1991 and promoted to sales representative in February 1992.', 2, 'http://accweb/emmployees/leverling.bmp'),
 	(4, 'Peacock', 'Margaret', 'Sales Representative', 'Mrs.', '1937-09-19', '1993-05-03', '4110 Old Redmond Rd.', 'Redmond', 'WA', '98052', 'USA', '(206) 555-8122', '5176', '\x', 'Margaret holds a BA in English literature from Concordia College (1958) and an MA from the American Institute of Culinary Arts (1966).  She was assigned to the London office temporarily from July through November 1992.', 2, 'http://accweb/emmployees/peacock.bmp'),
@@ -143,7 +143,7 @@ INSERT INTO public.employees VALUES
 -- Data for Name: region; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.region VALUES
+INSERT INTO northwind.region VALUES
 	(1, 'Eastern'),
 	(2, 'Western'),
 	(3, 'Northern'),
@@ -154,7 +154,7 @@ INSERT INTO public.region VALUES
 -- Data for Name: territories; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.territories VALUES
+INSERT INTO northwind.territories VALUES
 	('01581', 'Westboro', 1),
 	('01730', 'Bedford', 1),
 	('01833', 'Georgetow', 1),
@@ -214,7 +214,7 @@ INSERT INTO public.territories VALUES
 -- Data for Name: employee_territories; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.employee_territories VALUES
+INSERT INTO northwind.employee_territories VALUES
 	(1, '06897'),
 	(1, '19713'),
 	(2, '01581'),
@@ -270,7 +270,7 @@ INSERT INTO public.employee_territories VALUES
 -- Data for Name: shippers; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.shippers VALUES
+INSERT INTO northwind.shippers VALUES
 	(1, 'Speedy Express', '(503) 555-9831'),
 	(2, 'United Package', '(503) 555-3199'),
 	(3, 'Federal Shipping', '(503) 555-9931'),
@@ -283,7 +283,7 @@ INSERT INTO public.shippers VALUES
 -- Data for Name: orders; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.orders VALUES
+INSERT INTO northwind.orders VALUES
 	(10248, 'VINET', 5, '1996-07-04', '1996-08-01', '1996-07-16', 3, 32.38, 'Vins et alcools Chevalier', '59 rue de l''Abbaye', 'Reims', NULL, '51100', 'France'),
 	(10249, 'TOMSP', 6, '1996-07-05', '1996-08-16', '1996-07-10', 1, 11.61, 'Toms Spezialitäten', 'Luisenstr. 48', 'Münster', NULL, '44087', 'Germany'),
 	(10250, 'HANAR', 4, '1996-07-08', '1996-08-05', '1996-07-12', 2, 65.83, 'Hanari Carnes', 'Rua do Paço, 67', 'Rio de Janeiro', 'RJ', '05454-876', 'Brazil'),
@@ -1120,7 +1120,7 @@ INSERT INTO public.orders VALUES
 -- Data for Name: suppliers; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.suppliers VALUES
+INSERT INTO northwind.suppliers VALUES
 	(1, 'Exotic Liquids', 'Charlotte Cooper', 'Purchasing Manager', '49 Gilbert St.', 'London', NULL, 'EC1 4SD', 'UK', '(171) 555-2222', NULL, NULL),
 	(2, 'New Orleans Cajun Delights', 'Shelley Burke', 'Order Administrator', 'P.O. Box 78934', 'New Orleans', 'LA', '70117', 'USA', '(100) 555-4822', NULL, '#CAJUN.HTM#'),
 	(3, 'Grandma Kelly''s Homestead', 'Regina Murphy', 'Sales Representative', '707 Oxford Rd.', 'Ann Arbor', 'MI', '48104', 'USA', '(313) 555-5735', '(313) 555-3349', NULL),
@@ -1156,7 +1156,7 @@ INSERT INTO public.suppliers VALUES
 -- Data for Name: products; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.products VALUES
+INSERT INTO northwind.products VALUES
 	(1, 'Chai', 8, 1, '10 boxes x 30 bags', 18, 39, 0, 10, 1),
 	(2, 'Chang', 1, 1, '24 - 12 oz bottles', 19, 17, 40, 25, 1),
 	(3, 'Aniseed Syrup', 1, 2, '12 - 550 ml bottles', 10, 13, 70, 25, 0),
@@ -1240,7 +1240,7 @@ INSERT INTO public.products VALUES
 -- Data for Name: order_details; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.order_details VALUES
+INSERT INTO northwind.order_details VALUES
 	(10248, 11, 14, 12, 0),
 	(10248, 42, 9.8, 10, 0),
 	(10248, 72, 34.8, 5, 0),
@@ -3402,7 +3402,7 @@ INSERT INTO public.order_details VALUES
 -- Data for Name: us_states; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.us_states VALUES
+INSERT INTO northwind.us_states VALUES
 	(1, 'Alabama', 'AL', 'south'),
 	(2, 'Alaska', 'AK', 'north'),
 	(3, 'Arizona', 'AZ', 'west'),
