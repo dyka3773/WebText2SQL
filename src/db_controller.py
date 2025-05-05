@@ -17,7 +17,7 @@ def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
     try:
         cursor = connection.cursor()
         
-        logger.debug(f"Fetching databases for user: {user}")
+        logger.debug(f"Fetching database schemas for user: {user}")
         
         cursor.execute(f"""SELECT DISTINCT table_schema
                                 FROM information_schema.role_table_grants 
@@ -26,11 +26,11 @@ def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
         dbs = cursor.fetchall()
         
         if not dbs:
-            logger.error(f"No databases found for user: {user}")
+            logger.error(f"No database schemas found for user: {user}")
             return []
         
         dbs = [db[0] for db in dbs]
-        logger.debug(f"Databases found: {dbs}")
+        logger.debug(f"Schemas found: {dbs}")
         
         return dbs
     except sql.Error as e:
@@ -203,22 +203,21 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
     return ddl
 
 
-def get_db_metadata(connection, schema='northwind', user='test_user') -> dict:
+def get_db_metadata(connection, schema='northwind', user='test_user') -> list:
     """
-    Retrieve the metadata of the database.
+    Retrieve the metadata of the database tables available to the user in a given schema.
     
     Parameters:
         connection (psycopg.Connection): psycopg connection object.
 
     Returns:
-        dict: A dictionary where keys are table names and values are lists of column names.
+        list: List of table DDL strings.
     """
     logger.debug("Fetching all database tables available to the user")
     tables = _get_db_tables_for_user(connection, schema=schema, user=user)
 
-    metadata = {}
+    metadata = []
     
-    logger.debug("Fetching metadata for these tables")
     for table in tables:
         try:
             table_name = table[0]
@@ -227,6 +226,8 @@ def get_db_metadata(connection, schema='northwind', user='test_user') -> dict:
             
             table_ddl = _get_table_metadata(table_name, connection=connection, schema=schema)
             
+            logger.debug(f"DDL for table {table_name}:\n{table_ddl}")
+            
             if table_ddl is None:
                 logger.error(f"Failed to retrieve metadata for table: {table_name}")
                 continue
@@ -234,7 +235,7 @@ def get_db_metadata(connection, schema='northwind', user='test_user') -> dict:
             # Optimize the DDL string by removing extra spaces and newlines to use less tokens
             trimmed_ddl = " ".join(table_ddl.split())
             
-            metadata[table_name] = trimmed_ddl
+            metadata.append(trimmed_ddl)
             
         except sql.Error as e:
             logger.error(f"An error occurred while fetching metadata for table {table_name}: {e}")
