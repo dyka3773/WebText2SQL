@@ -78,8 +78,14 @@ async def on_chat_start():
     """
     logger.debug(f"Chat started by User: {cl.user_session.get('user').identifier}")
     # Step 1: Get the list of available databases from the database controller
-    # db_list = db_controller.get_available_dbs(user, password) # TODO: Implement this function
-    db_list = ["northwind", "northwind", "northwind"]  # Placeholder for the actual database list
+    user = cl.user_session.get("user").metadata["conn_info"]["user"]
+    conn_info, password = cl.user_session.get("user").metadata["conn_info"], cl.user_session.get("user").metadata["password"]
+    conn_info["password"] = password
+    connection = sql.connect(**conn_info)
+    
+    logger.debug(f"Connected to the database with connection info: {conn_info}")
+    
+    db_list = db_controller.get_available_dbs(connection, user)
 
     action_btns: list[cl.Action] = [
         cl.Action(name=f"{db_name} Queries", payload={"value": db_name}, label=f"Choose {db_name}") for db_name in db_list

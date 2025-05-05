@@ -3,6 +3,42 @@ import logging
 
 logger = logging.getLogger("webtext2sql")
 
+def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
+    """
+    Retrieve the names of all databases available to the user.
+
+    Parameters:
+        connection (psycopg.Connection): psycopg connection object.
+        user (str): The username for which to retrieve the databases.
+
+    Returns:
+        list: List of database names.
+    """
+    try:
+        cursor = connection.cursor()
+        
+        logger.debug(f"Fetching databases for user: {user}")
+        
+        cursor.execute(f"""SELECT DISTINCT table_schema
+                                FROM information_schema.role_table_grants 
+                                WHERE privilege_type = 'SELECT' 
+                                AND grantee = 'test_user';""")
+        dbs = cursor.fetchall()
+        
+        if not dbs:
+            logger.error(f"No databases found for user: {user}")
+            return []
+        
+        dbs = [db[0] for db in dbs]
+        logger.debug(f"Databases found: {dbs}")
+        
+        return dbs
+    except sql.Error as e:
+        logger.error(f"An error occurred: {e}")
+        return []
+    finally:
+        cursor.close()
+        
 
 def fetch_data(query, connection) -> list:
     """
@@ -10,7 +46,7 @@ def fetch_data(query, connection) -> list:
 
     Parameters:
         query (str): SQL query to execute.
-        connection (sqlite3.Connection): SQLite connection object.
+        connection (psycopg.Connection): psycopg connection object.
 
     Returns:
         list: List of tuples containing the fetched data.
@@ -36,7 +72,7 @@ def _get_db_tables_for_user(connection, schema='northwind', user='test_user') ->
     Retrieve the names of all tables in the database.
 
     Parameters:
-        connection (psycopg2.Connection): psycopg2 connection object.
+        connection (psycopg.Connection): psycopg connection object.
     Returns:
         list: List of table names.
     """
@@ -59,7 +95,7 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
 
     Args:
         table_name (str): Name of the table.
-        connection (psycopg2.Connection): psycopg2 connection object.
+        connection (psycopg.Connection): psycopg connection object.
         schema (str): Schema name. Default is 'northwind'.
 
     Returns:
@@ -172,7 +208,7 @@ def get_db_metadata(connection, schema='northwind', user='test_user') -> dict:
     Retrieve the metadata of the database.
     
     Parameters:
-        connection (psycopg2.Connection): psycopg2 connection object.
+        connection (psycopg.Connection): psycopg connection object.
 
     Returns:
         dict: A dictionary where keys are table names and values are lists of column names.
