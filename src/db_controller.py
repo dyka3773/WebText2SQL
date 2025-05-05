@@ -1,4 +1,4 @@
-import psycopg2 as sql
+import psycopg as sql
 import logging
 
 logger = logging.getLogger("webtext2sql")
@@ -31,7 +31,7 @@ def fetch_data(query, connection) -> list:
         cursor.close()
 
 
-def _get_db_tables_for_user(connection) -> list[str]:
+def _get_db_tables_for_user(connection, schema='northwind', user='test_user') -> list[str]:
     """
     Retrieve the names of all tables in the database.
 
@@ -41,11 +41,11 @@ def _get_db_tables_for_user(connection) -> list[str]:
         list: List of table names.
     """
     cursor = connection.cursor()
-    cursor.execute("""SELECT DISTINCT table_name
+    cursor.execute(f"""SELECT DISTINCT table_name
                         FROM information_schema.role_table_grants 
                         WHERE privilege_type = 'SELECT' 
-                        AND grantee = 'test_user'
-                        AND table_schema = 'northwind';
+                        AND grantee = '{user}'
+                        AND table_schema = '{schema}';
                    """)
     tables = cursor.fetchall()
     
@@ -167,10 +167,7 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
     return ddl
 
 
-    
-    
-
-def get_db_metadata(connection) -> dict:
+def get_db_metadata(connection, schema='northwind', user='test_user') -> dict:
     """
     Retrieve the metadata of the database.
     
@@ -180,9 +177,8 @@ def get_db_metadata(connection) -> dict:
     Returns:
         dict: A dictionary where keys are table names and values are lists of column names.
     """
-    cursor = connection.cursor()
     logger.debug("Fetching all database tables available to the user")
-    tables = _get_db_tables_for_user(connection)
+    tables = _get_db_tables_for_user(connection, schema=schema, user=user)
 
     metadata = {}
     
@@ -191,16 +187,21 @@ def get_db_metadata(connection) -> dict:
         try:
             table_name = table[0]
             
-            logger.debug(f"Fetching metadata for table: {table_name}")
+            logger.debug(f"Fetching metadata & DDL for table: {table_name}")
             
-            cursor.execute(f"PRAGMA table_info({table_name});")
-            columns = cursor.fetchall()
-            metadata[table_name] = [column[1] for column in columns]
+            table_ddl = _get_table_metadata(table_name, connection=connection, schema=schema)
+            
+            if table_ddl is None:
+                logger.error(f"Failed to retrieve metadata for table: {table_name}")
+                continue
+            
+            # Optimize the DDL string by removing extra spaces and newlines to use less tokens
+            trimmed_ddl = " ".join(table_ddl.split())
+            
+            metadata[table_name] = trimmed_ddl
             
         except sql.Error as e:
             logger.error(f"An error occurred while fetching metadata for table {table_name}: {e}")
             continue
-    
-    cursor.close()
 
     return metadata

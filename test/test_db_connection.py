@@ -1,4 +1,4 @@
-import psycopg2
+import psycopg as sql
 import pytest
 from dotenv import load_dotenv
 import os
@@ -22,7 +22,7 @@ def test_pgsql_connection(db_config):
     try:
         logger.info("Attempting to connect to the database...")
         
-        connection = psycopg2.connect(db_config["db_url"])
+        connection = sql.connect(db_config["db_url"])
         assert connection is not None, "Failed to establish a connection to the database."
         
         logger.info("Database connection established successfully.")
@@ -35,7 +35,7 @@ def test_pgsql_connection(db_config):
             
 def test_get_db_tables_for_user(db_config):
     try:
-        connection = psycopg2.connect(db_config["db_url"])
+        connection = sql.connect(db_config["db_url"])
         cursor = connection.cursor()
         
         cursor.execute("""SELECT DISTINCT table_name
@@ -60,7 +60,7 @@ def test_get_db_tables_for_user(db_config):
            
  
 def test_get_table_metadata(db_config):
-    connection = psycopg2.connect(db_config["db_url"])
+    connection = sql.connect(db_config["db_url"])
     
     expected_categories_table_ddl = """CREATE TABLE northwind.categories (
         "category_id" smallint NOT NULL,
