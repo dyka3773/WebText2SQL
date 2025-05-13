@@ -22,11 +22,10 @@ def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
         
         logger.debug(f"Fetching database schemas for user: {user}")
         
-        # TODO: Add the appropriate user in this query
         cursor.execute(f"""SELECT DISTINCT table_schema
                                 FROM information_schema.role_table_grants 
                                 WHERE privilege_type = 'SELECT' 
-                                AND grantee = 'test_user';""")
+                                AND grantee = '{user}';""")
         dbs = cursor.fetchall()
         
         if not dbs:

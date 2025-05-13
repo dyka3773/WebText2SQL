@@ -16,18 +16,21 @@ def authenticate_user(username: str, password: str, connection_string: str) -> c
     Returns:
         cl.User: An instance of the User class if authentication is successful, None otherwise.
     """
-    # TODO: Use the credentials of the db server they want to connect to. See #2
-    if (username, password) == ("admin", "admin"):
-        logger.debug(f"User {username} authenticated successfully") # TODO: Use user id instead of username for GDPR compliance
-        
-        try:
-            connection = sql.connect(connection_string)
-        except sql.Error as e:
-            logger.error(f"Error connecting to the database: {e}")
-            return None
+    try:
+        # Check if the username and password are present
+        if not username or not password:
+            raise ValueError("Username and password cannot be empty")
+
+        connection = sql.connect(f"postgresql://{username}:{password}@{connection_string}")
+        logger.debug(f"User {username} authenticated successfully")
         
         return cl.User(
-            identifier="admin", metadata={"conn_info": connection.info.get_parameters(), "password": connection.info.password},
+            identifier=f"{username}", metadata={"conn_info": connection.info.get_parameters(), "password": connection.info.password},
         )
-    else:
+    except sql.Error as e:
+        logger.warning(f"The following user failed to authenticate: {username}. Error: {e}")
         return None
+    finally:
+        if connection:
+            connection.close()
+            logger.debug(f"Connection closed for user {username}")

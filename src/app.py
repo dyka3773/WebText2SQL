@@ -121,6 +121,7 @@ async def handle_message(message: cl.Message):
     {message.content}
     
     Keep in mind that the database is a PostgreSQL database and that the schema is {schema} and it should be used in the SQL query.
+    Unless explicitly stated, please limit the number of rows returned to 100.
     """
     # Step 2: Send user's query to AI & get the response from AI in the form of a SQL query
     ai_response = await client.chat.completions.create(
