@@ -147,15 +147,7 @@ async def handle_message(message: cl.Message):
     results = db_controller.fetch_data(sql_query, connection)
 
     # Step 4: Format the data into a user-friendly format before and sending it back to the user
-    # TODO: Wrap below in a function to make it cleaner
-    if not results:
-        logger.warning("No results found for the SQL query.")
-        results = "No results found."
-    else:
-        # TODO: Format the results into a more user-friendly format. See #1
-        results = "\n".join([str(row) for row in results])
-        
-    answer = f"Here is the SQL query the AI model generated:\n```sql\n{sql_query}\n```\n\nAnd here are the results:\n```\n{results}\n```"
+    answer = str_manipulation.form_answer(results, sql_query)
 
     # Step 5: Send the response back to the user
     await cl.Message(

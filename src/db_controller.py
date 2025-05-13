@@ -1,5 +1,8 @@
+from typing import List, Tuple
 import psycopg as sql
 import logging
+
+import str_manipulation
 
 logger = logging.getLogger("webtext2sql")
 
@@ -19,6 +22,7 @@ def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
         
         logger.debug(f"Fetching database schemas for user: {user}")
         
+        # TODO: Add the appropriate user in this query
         cursor.execute(f"""SELECT DISTINCT table_schema
                                 FROM information_schema.role_table_grants 
                                 WHERE privilege_type = 'SELECT' 
@@ -40,7 +44,7 @@ def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
         cursor.close()
         
 
-def fetch_data(query, connection) -> list:
+def fetch_data(query, connection) -> List[Tuple]:
     """
     Fetch data from the database using the provided SQL query.
 
@@ -49,7 +53,7 @@ def fetch_data(query, connection) -> list:
         connection (psycopg.Connection): psycopg connection object.
 
     Returns:
-        list: List of tuples containing the fetched data.
+        List[Tuple]: List of tuples containing the fetched data.
     """
     try:
         cursor = connection.cursor()
@@ -57,7 +61,7 @@ def fetch_data(query, connection) -> list:
         logger.debug(f"Executing query: {query}")
         
         cursor.execute(query)
-        results = cursor.fetchall()
+        results: List[Tuple] = cursor.fetchall()
 
         return results
     except sql.Error as e:
@@ -197,7 +201,7 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
                     ddl += f"\nCOMMENT ON COLUMN {schema}.{table_name}.\"{col[0]}\" IS '{col[4]}';"
 
         except Exception as e:
-            logger.info("Error:", e)
+            logger.error(f"An error occurred while fetching metadata for table {table_name}: {e}")
             return None
 
     return ddl
@@ -214,13 +218,13 @@ def get_db_metadata(connection, schema='northwind', user='test_user') -> list:
         list: List of table DDL strings.
     """
     logger.debug("Fetching all database tables available to the user")
-    tables = _get_db_tables_for_user(connection, schema=schema, user=user)
+    tables: List[Tuple] = _get_db_tables_for_user(connection, schema=schema, user=user)
 
     metadata = []
     
     for table in tables:
         try:
-            table_name = table[0]
+            table_name: str = table[0]
             
             logger.debug(f"Fetching metadata & DDL for table: {table_name}")
             
@@ -232,8 +236,8 @@ def get_db_metadata(connection, schema='northwind', user='test_user') -> list:
                 logger.error(f"Failed to retrieve metadata for table: {table_name}")
                 continue
             
-            # Optimize the DDL string by removing extra spaces and newlines to use less tokens
-            trimmed_ddl = " ".join(table_ddl.split())
+            # Optimize the DDL string to use less tokens
+            trimmed_ddl = str_manipulation.optimize_ddl_for_ai(table_ddl)
             
             metadata.append(trimmed_ddl)
             

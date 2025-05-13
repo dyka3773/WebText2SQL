@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, List, Tuple
 import logging
 
 logger = logging.getLogger("webtext2sql")
@@ -61,3 +61,39 @@ def _remove_empty_lines(string: str) -> str:
     lines = [line for line in lines if line]  # Remove empty lines
     
     return "\n".join(lines)
+
+def form_answer(results: List[Tuple], query: str) -> str:
+    """
+    Format the results before sending them back to the user.
+
+    Args:
+        results (List[Tuple]): List of tuples containing the fetched data.
+
+    Returns:
+        str: Formatted string representation of the results and the SQL query.
+    """
+    if not results:
+        logger.warning("No results found for the SQL query.")
+        results = "No results found."
+    else:
+        # TODO: Format the results into a more user-friendly format. See #1
+        results = "\n".join([str(row) for row in results])
+        
+    answer = f"Here is the SQL query the AI model generated:\n```sql\n{query}\n```\n\nAnd here are the results:\n```\n{results}\n```"
+    
+    logger.debug(f"Formatted answer: {answer}")
+    
+    return answer
+
+def optimize_ddl_for_ai(ddl: str) -> str:
+    """
+    Optimize the DDL for AI model processing by removing unnecessary whitespace.
+
+    Args:
+        ddl (str): The DDL string to optimize.
+
+    Returns:
+        str: Optimized DDL string.
+    """
+    trimmed_ddl = " ".join(ddl.split())
+    return trimmed_ddl
