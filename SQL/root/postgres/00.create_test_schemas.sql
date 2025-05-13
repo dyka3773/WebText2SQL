@@ -1,1 +1,2 @@
 CREATE SCHEMA northwind;
+CREATE SCHEMA pagila;
