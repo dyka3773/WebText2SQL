@@ -1,6 +1,5 @@
 import chainlit as cl
 from chainlit.types import ThreadDict
-from openai import AsyncOpenAI
 from dotenv import load_dotenv
 import os
 import psycopg as sql
@@ -14,19 +13,12 @@ import db_controller
 import str_manipulation
 import auth
 import chainlit_controller
+import ai_controller
 
 
 load_dotenv()
 
 cl.instrument_openai()
-
-client = AsyncOpenAI(
-    api_key=os.getenv("OPENAI_API_KEY")
-)
-
-settings = {
-    "model": "gpt-4o-mini",
-}
 
 
 @cl.password_auth_callback
@@ -123,20 +115,13 @@ async def handle_message(message: cl.Message):
     Keep in mind that the database is a PostgreSQL database and that the schema is {schema} and it should be used in the SQL query.
     Unless explicitly stated, please limit the number of rows returned to 100.
     """
-    # Step 2: Send user's query to AI & get the response from AI in the form of a SQL query
-    ai_response = await client.chat.completions.create(
-        messages=[
-            {"role": "user", "content": template}
-        ],
-        **settings,
-    )
+    # Step 2: Send user's query to AI & get the response from AI in the form of an SQL query
+    response = await ai_controller.get_ai_response(template)
 
-    # Step 3: Execute the SQL query against the database
-    response_str = ai_response.choices[0].message.content.strip()
-    logger.debug(f"AI's response: {response_str}")
+    logger.debug(f"AI's response: {response}")
     
     # TODO: Wrap below until Step 4 in a function to make it cleaner
-    sql_query = str_manipulation.extract_sql_only(response_str)
+    sql_query = str_manipulation.extract_sql_only(response)
     logger.debug(f"Extracted SQL query: {sql_query}")
     if not sql_query:
         logger.error("The AI model did not return a valid SQL query.")
@@ -145,6 +130,7 @@ async def handle_message(message: cl.Message):
         ).send()
         return
     
+    # Step 3: Execute the SQL query against the database
     results, col_names = db_controller.fetch_data(sql_query, connection)
 
     # Step 4: Format the data into a user-friendly format before and sending it back to the user
