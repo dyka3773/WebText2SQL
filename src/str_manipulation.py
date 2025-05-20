@@ -1,5 +1,8 @@
 from typing import Callable, List, Tuple
 import logging
+from cachetools.func import ttl_cache
+
+from caching_configs import CACHE_TTL, CACHE_MAX_SIZE
 
 logger = logging.getLogger("webtext2sql")
 
@@ -62,13 +65,13 @@ def _remove_empty_lines(string: str) -> str:
     
     return "\n".join(lines)
 
-def form_answer(results: List[Tuple], column_names: List[str], query: str) -> str:
+def form_answer(results: Tuple[Tuple], column_names: Tuple[str], query: str) -> str:
     """
     Format the results before sending them back to the user.
 
     Args:
-        results (List[Tuple]): List of tuples containing the fetched data.
-        column_names (List[str]): List of column names.
+        results (Tuple[Tuple]): Tuple of tuples containing the fetched data.
+        column_names (Tuple[str]): Tuple of column names.
         query (str): The SQL query that was executed.
 
     Returns:
@@ -78,7 +81,7 @@ def form_answer(results: List[Tuple], column_names: List[str], query: str) -> st
         logger.warning("No results found for the SQL query.")
         results = "No results found."
     else:
-        results = create_markdown_results_table(results, column_names)
+        results = _create_markdown_results_table(results, column_names)
         logger.debug(f"Formatted results: {results}")
         
     answer = f"Here is the SQL query the AI model generated:\n```sql\n{query}\n```\n\nAnd here are the results:\n{results}"
@@ -100,20 +103,23 @@ def optimize_ddl_for_ai(ddl: str) -> str:
     trimmed_ddl = " ".join(ddl.split())
     return trimmed_ddl
 
-def create_markdown_results_table(results: List[Tuple], column_names: List[str]) -> str:
+@ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
+def _create_markdown_results_table(results: Tuple[Tuple], column_names: Tuple[str]) -> str:
     """
     Create a markdown table from the results and column names.
 
     Args:
-        results (List[Tuple]): List of tuples containing the fetched data.
-        column_names (List[str]): List of column names.
+        results (Tuple[Tuple]): Tuple of tuples containing the fetched data.
+        column_names (Tuple[str]): Tuple of column names.
 
     Returns:
         str: Markdown formatted table.
     """
+    all_column_names = [*column_names] # Generators have no len() method, so we need to convert it to a list
+    
     # Create header
-    header = "| " + " | ".join(column_names) + " |"
-    separator = "| " + " | ".join(["---"] * len(column_names)) + " |"
+    header = "| " + " | ".join(all_column_names) + " |"
+    separator = "| " + " | ".join(["---"] * len(all_column_names)) + " |"
     
     # Create rows
     rows = []

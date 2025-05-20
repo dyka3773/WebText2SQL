@@ -1,11 +1,14 @@
 from typing import List, Tuple
 import psycopg as sql
 import logging
+from cachetools.func import ttl_cache
 
 import str_manipulation
+from caching_configs import CACHE_TTL, CACHE_MAX_SIZE
 
 logger = logging.getLogger("webtext2sql")
 
+@ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
 def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
     """
     Retrieve the names of all databases available to the user.
@@ -42,8 +45,8 @@ def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
     finally:
         cursor.close()
         
-
-def fetch_data(query: str, connection: sql.Connection) -> Tuple[List[Tuple], List[str]]:
+@ttl_cache(maxsize=1024, ttl=10)
+def fetch_data(query: str, connection: sql.Connection) -> Tuple[Tuple[Tuple], Tuple[str]]:
     """
     Fetch data from the database using the provided SQL query.
 
@@ -62,16 +65,16 @@ def fetch_data(query: str, connection: sql.Connection) -> Tuple[List[Tuple], Lis
         cursor.execute(query)
         results: List[Tuple] = cursor.fetchall()
         
-        column_names = [desc[0] for desc in cursor.description] # This will use the aliases if they are set in the query
+        column_names = (desc[0] for desc in cursor.description) # This will use the aliases if they are set in the query
 
-        return results, column_names
+        return tuple(results), column_names
     except sql.Error as e:
         logger.error(f"An error occurred: {e}")
         # TODO: In case of an sql error, we should return it to the user instead of printing it.
     finally:
         cursor.close()
 
-
+@ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
 def _get_db_tables_for_user(connection, schema='northwind', user='test_user') -> list[str]:
     """
     Retrieve the names of all tables in the database.
@@ -95,6 +98,7 @@ def _get_db_tables_for_user(connection, schema='northwind', user='test_user') ->
     cursor.close()
     return tables
 
+@ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
 def _get_table_metadata(table_name, connection, schema='northwind') -> str:
     """Get DDL of the table.
 
@@ -207,7 +211,7 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
 
     return ddl
 
-
+@ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
 def get_db_metadata(connection, schema='northwind', user='test_user') -> list:
     """
     Retrieve the metadata of the database tables available to the user in a given schema.
