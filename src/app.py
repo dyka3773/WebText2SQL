@@ -145,10 +145,10 @@ async def handle_message(message: cl.Message):
         ).send()
         return
     
-    results = db_controller.fetch_data(sql_query, connection)
+    results, col_names = db_controller.fetch_data(sql_query, connection)
 
     # Step 4: Format the data into a user-friendly format before and sending it back to the user
-    answer = str_manipulation.form_answer(results, sql_query)
+    answer = str_manipulation.form_answer(results, col_names, sql_query)
 
     # Step 5: Send the response back to the user
     await cl.Message(

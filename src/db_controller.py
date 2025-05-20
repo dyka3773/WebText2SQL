@@ -43,7 +43,7 @@ def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
         cursor.close()
         
 
-def fetch_data(query, connection) -> List[Tuple]:
+def fetch_data(query: str, connection: sql.Connection) -> Tuple[List[Tuple], List[str]]:
     """
     Fetch data from the database using the provided SQL query.
 
@@ -52,7 +52,7 @@ def fetch_data(query, connection) -> List[Tuple]:
         connection (psycopg.Connection): psycopg connection object.
 
     Returns:
-        List[Tuple]: List of tuples containing the fetched data.
+        Tuple: A tuple containing the results and column names.
     """
     try:
         cursor = connection.cursor()
@@ -61,8 +61,10 @@ def fetch_data(query, connection) -> List[Tuple]:
         
         cursor.execute(query)
         results: List[Tuple] = cursor.fetchall()
+        
+        column_names = [desc[0] for desc in cursor.description] # This will use the aliases if they are set in the query
 
-        return results
+        return results, column_names
     except sql.Error as e:
         logger.error(f"An error occurred: {e}")
         # TODO: In case of an sql error, we should return it to the user instead of printing it.

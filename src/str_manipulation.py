@@ -62,12 +62,14 @@ def _remove_empty_lines(string: str) -> str:
     
     return "\n".join(lines)
 
-def form_answer(results: List[Tuple], query: str) -> str:
+def form_answer(results: List[Tuple], column_names: List[str], query: str) -> str:
     """
     Format the results before sending them back to the user.
 
     Args:
         results (List[Tuple]): List of tuples containing the fetched data.
+        column_names (List[str]): List of column names.
+        query (str): The SQL query that was executed.
 
     Returns:
         str: Formatted string representation of the results and the SQL query.
@@ -76,10 +78,10 @@ def form_answer(results: List[Tuple], query: str) -> str:
         logger.warning("No results found for the SQL query.")
         results = "No results found."
     else:
-        # TODO: Format the results into a more user-friendly format. See #1
-        results = "\n".join([str(row) for row in results])
+        results = create_markdown_results_table(results, column_names)
+        logger.debug(f"Formatted results: {results}")
         
-    answer = f"Here is the SQL query the AI model generated:\n```sql\n{query}\n```\n\nAnd here are the results:\n```\n{results}\n```"
+    answer = f"Here is the SQL query the AI model generated:\n```sql\n{query}\n```\n\nAnd here are the results:\n{results}"
     
     logger.debug(f"Formatted answer: {answer}")
     
@@ -97,3 +99,28 @@ def optimize_ddl_for_ai(ddl: str) -> str:
     """
     trimmed_ddl = " ".join(ddl.split())
     return trimmed_ddl
+
+def create_markdown_results_table(results: List[Tuple], column_names: List[str]) -> str:
+    """
+    Create a markdown table from the results and column names.
+
+    Args:
+        results (List[Tuple]): List of tuples containing the fetched data.
+        column_names (List[str]): List of column names.
+
+    Returns:
+        str: Markdown formatted table.
+    """
+    # Create header
+    header = "| " + " | ".join(column_names) + " |"
+    separator = "| " + " | ".join(["---"] * len(column_names)) + " |"
+    
+    # Create rows
+    rows = []
+    for row in results:
+        rows.append("| " + " | ".join([str(item) for item in row]) + " |")
+    
+    # Combine header, separator, and rows
+    markdown_table = "\n".join([header, separator] + rows)
+    
+    return markdown_table
