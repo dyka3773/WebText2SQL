@@ -1,106 +1,115 @@
-from typing import List, Tuple
-import psycopg as sql
 import logging
+
+import psycopg as sql
 from cachetools.func import ttl_cache
 
 import str_manipulation
-from caching_configs import CACHE_TTL, CACHE_MAX_SIZE
+from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 
 logger = logging.getLogger("webtext2sql")
+
 
 @ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
 def get_available_dbs(connection: sql.Connection, user: str) -> list[str]:
     """
     Retrieve the names of all databases available to the user.
 
-    Parameters:
+    Args:
         connection (psycopg.Connection): psycopg connection object.
         user (str): The username for which to retrieve the databases.
 
     Returns:
-        list: List of database names.
+        list: list of database names.
     """
     try:
         cursor = connection.cursor()
-        
+
         logger.debug(f"Fetching database schemas for user: {user}")
-        
+
         cursor.execute(f"""SELECT DISTINCT table_schema
-                                FROM information_schema.role_table_grants 
-                                WHERE privilege_type = 'SELECT' 
+                                FROM information_schema.role_table_grants
+                                WHERE privilege_type = 'SELECT'
                                 AND grantee = '{user}';""")
         dbs = cursor.fetchall()
-        
+
         if not dbs:
             logger.error(f"No database schemas found for user: {user}")
             return []
-        
+
         dbs = [db[0] for db in dbs]
         logger.debug(f"Schemas found: {dbs}")
-        
-        return dbs
-    except sql.Error as e:
-        logger.error(f"An error occurred: {e}")
+
+    except sql.Error:
+        logger.exception("An error occurred")
         return []
+    else:
+        return dbs
     finally:
         cursor.close()
-        
+
+
 @ttl_cache(maxsize=1024, ttl=10)
-def fetch_data(query: str, connection: sql.Connection) -> Tuple[Tuple[Tuple], Tuple[str]]:
+def fetch_data(query: str, connection: sql.Connection) -> tuple[tuple[tuple], tuple[str]]:
     """
     Fetch data from the database using the provided SQL query.
 
-    Parameters:
+    Args:
         query (str): SQL query to execute.
         connection (psycopg.Connection): psycopg connection object.
 
     Returns:
-        Tuple: A tuple containing the results and column names.
+        tuple: A tuple containing the results and column names.
     """
     try:
         cursor = connection.cursor()
-        
+
         logger.debug(f"Executing query: {query}")
-        
+
         cursor.execute(query)
-        results: List[Tuple] = cursor.fetchall()
-        
-        column_names = (desc[0] for desc in cursor.description) # This will use the aliases if they are set in the query
+        results: list[tuple] = cursor.fetchall()
+
+        column_names = (desc[0] for desc in cursor.description)  # This will use the aliases if they are set in the query
 
         return tuple(results), column_names
-    except sql.Error as e:
-        logger.error(f"An error occurred: {e}")
-        # TODO: In case of an sql error, we should return it to the user instead of printing it.
+    except sql.Error:
+        logger.exception("An error occurred")
+        # TODO @dyka3773: In case of an sql error, we should return it to the user instead of printing it.
     finally:
         cursor.close()
 
+
 @ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
-def _get_db_tables_for_user(connection, schema='northwind', user='test_user') -> list[str]:
+def _get_db_tables_for_user(connection: sql.Connection, schema: str = "northwind", user: str = "test_user") -> list[str]:
     """
     Retrieve the names of all tables in the database.
 
-    Parameters:
+    Args:
         connection (psycopg.Connection): psycopg connection object.
+        schema (str): Schema name. Default is 'northwind'.
+        user (str): The username for which to retrieve the tables. Default is 'test_user'.
+
     Returns:
-        list: List of table names.
+        list: list of table names.
     """
     cursor = connection.cursor()
     cursor.execute(f"""SELECT DISTINCT table_name
-                        FROM information_schema.role_table_grants 
-                        WHERE privilege_type = 'SELECT' 
+                        FROM information_schema.role_table_grants
+                        WHERE privilege_type = 'SELECT'
                         AND grantee = '{user}'
                         AND table_schema = '{schema}';
                    """)
     tables = cursor.fetchall()
-    
+
     logger.debug(f"Tables found: {tables}")
-    
+
     cursor.close()
     return tables
 
+
 @ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
-def _get_table_metadata(table_name, connection, schema='northwind') -> str:
-    """Get DDL of the table.
+def _get_table_metadata(table_name: str, connection: sql.Connection, schema: str = "northwind") -> str:
+    """
+    Get DDL of the table.
 
     Args:
         table_name (str): Name of the table.
@@ -110,13 +119,13 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
     Returns:
         str: DDL of the table.
     """
-    ddl = f'CREATE TABLE {schema}.{table_name} (\n'
-    
+    ddl = f"CREATE TABLE {schema}.{table_name} (\n"
+
     with connection.cursor() as cur:
         try:
             # Get column definitions
             cur.execute(f"""
-                SELECT 
+                SELECT
                     a.attname AS column_name,
                     pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
                     a.attnotnull AS not_null,
@@ -135,14 +144,14 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
             """)
 
             columns = cur.fetchall()
-            col_lines = [] # List to hold column definitions
-            
+            col_lines = []  # list to hold column definitions
+
             for col in columns:
                 col_def = f'    "{col[0]}" {col[1]}'
                 if col[3]:
-                    col_def += f' DEFAULT {col[3]}'
+                    col_def += f" DEFAULT {col[3]}"
                 if col[2]:
-                    col_def += ' NOT NULL'
+                    col_def += " NOT NULL"
                 col_lines.append(col_def)
 
             # Get primary key
@@ -160,7 +169,7 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
 
             pk_cols = [f'"{row[0]}"' for row in cur.fetchall()]
             if pk_cols:
-                col_lines.append(f'    PRIMARY KEY ({", ".join(pk_cols)})')
+                col_lines.append(f"    PRIMARY KEY ({', '.join(pk_cols)})")
 
             # Get foreign keys
             cur.execute(f"""
@@ -205,49 +214,53 @@ def _get_table_metadata(table_name, connection, schema='northwind') -> str:
                 if col[4]:
                     ddl += f"\nCOMMENT ON COLUMN {schema}.{table_name}.\"{col[0]}\" IS '{col[4]}';"
 
-        except Exception as e:
-            logger.error(f"An error occurred while fetching metadata for table {table_name}: {e}")
+        except Exception:
+            logger.exception(f"An error occurred while fetching metadata for table {table_name}")
             return None
 
     return ddl
 
+
 @ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
-def get_db_metadata(connection, schema='northwind', user='test_user') -> list:
+def get_db_metadata(connection: sql.Connection, schema: str = "northwind", user: str = "test_user") -> list:
     """
     Retrieve the metadata of the database tables available to the user in a given schema.
-    
-    Parameters:
+
+    Args:
         connection (psycopg.Connection): psycopg connection object.
+        schema (str): Schema name. Default is 'northwind'.
+        user (str): The username for which to retrieve the metadata. Default is 'test_user'.
 
     Returns:
-        list: List of table DDL strings.
+        list: list of table DDL strings.
     """
+    # TODO @dyka3773: Remove the default values for schema and user everywhere in the code.
     logger.debug("Fetching all database tables available to the user")
-    tables: List[Tuple] = _get_db_tables_for_user(connection, schema=schema, user=user)
+    tables: list[tuple] = _get_db_tables_for_user(connection, schema=schema, user=user)
 
     metadata = []
-    
+
     for table in tables:
         try:
             table_name: str = table[0]
-            
+
             logger.debug(f"Fetching metadata & DDL for table: {table_name}")
-            
+
             table_ddl = _get_table_metadata(table_name, connection=connection, schema=schema)
-            
+
             logger.debug(f"DDL for table {table_name}:\n{table_ddl}")
-            
+
             if table_ddl is None:
                 logger.error(f"Failed to retrieve metadata for table: {table_name}")
                 continue
-            
+
             # Optimize the DDL string to use less tokens
             trimmed_ddl = str_manipulation.optimize_ddl_for_ai(table_ddl)
-            
+
             metadata.append(trimmed_ddl)
-            
-        except sql.Error as e:
-            logger.error(f"An error occurred while fetching metadata for table {table_name}: {e}")
+
+        except sql.Error:
+            logger.exception(f"An error occurred while fetching metadata for table {table_name}")
             continue
 
     return metadata

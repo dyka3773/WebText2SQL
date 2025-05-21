@@ -15,10 +15,6 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = []
-
-[tool.pytest.ini_options]
-pythonpath = "src"
-addopts = [
-    "--import-mode=importlib",
+dev = [
+    "ruff>=0.11.10",
 ]
