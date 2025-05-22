@@ -3,7 +3,7 @@ services:
     container_name: postgres_container
     image: postgres:16
     volumes:
-      - ./.data/postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-root}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-root}
@@ -30,3 +30,5 @@ services:
     volumes:
       - ./.data/azurite:/data
     command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
+volumes:
+  postgres_data:
