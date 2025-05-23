@@ -65,6 +65,13 @@ async def handle_schema_selection(schema_btns: list[cl.Action]) -> None:
         actions=schema_btns,
     ).send()
 
+    # If the user doesn't select a schema, wait for them to do so
+    while not res:  # This is needed because sometimes the response is time-ing out and we get None
+        res = await cl.AskActionMessage(
+            content="Please choose a database schema to work with before sending any messages:",
+            actions=schema_btns,
+        ).send()
+
     # Step 2: Get the selected schema name from the action payload
     schema_to_work_with = res.get("payload").get("value")
     if schema_to_work_with:

@@ -73,7 +73,7 @@ def fetch_data(query: str, connection: sql.Connection) -> tuple[tuple[tuple], tu
         return tuple(results), column_names
     except sql.Error:
         logger.exception("An error occurred")
-        # TODO @dyka3773: In case of an sql error, we should return it to the user instead of printing it.
+        # TODO @dyka3773: In case of an sql error, we should return it to the user instead of just logging it.
     finally:
         cursor.close()
 
