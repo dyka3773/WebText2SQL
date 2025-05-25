@@ -1,3 +1,0 @@
-CREATE SCHEMA northwind;
-CREATE SCHEMA pagila;
-CREATE SCHEMA sailors;

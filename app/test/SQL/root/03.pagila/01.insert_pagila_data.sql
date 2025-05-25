@@ -1,98 +1,28 @@
-
---
--- Name: actor_actor_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('actor_actor_id_seq', 200, true);
-
-
---
--- Name: category_category_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
 
 SELECT pg_catalog.setval('category_category_id_seq', 16, true);
 
-
---
--- Name: film_film_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('film_film_id_seq', 1000, true);
-
-
---
--- Name: address_address_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
 
 SELECT pg_catalog.setval('address_address_id_seq', 605, true);
 
-
---
--- Name: city_city_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('city_city_id_seq', 600, true);
-
-
---
--- Name: country_country_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
 
 SELECT pg_catalog.setval('country_country_id_seq', 109, true);
 
-
---
--- Name: customer_customer_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('customer_customer_id_seq', 599, true);
-
-
---
--- Name: inventory_inventory_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
 
 SELECT pg_catalog.setval('inventory_inventory_id_seq', 4581, true);
 
-
---
--- Name: language_language_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('language_language_id_seq', 6, true);
-
-
---
--- Name: payment_payment_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
 
 SELECT pg_catalog.setval('payment_payment_id_seq', 32098, true);
 
-
---
--- Name: rental_rental_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('rental_rental_id_seq', 16049, true);
-
-
---
--- Name: staff_staff_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
 
 SELECT pg_catalog.setval('staff_staff_id_seq', 2, true);
 
-
---
--- Name: store_store_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
 SELECT pg_catalog.setval('store_store_id_seq', 2, true);
-
-
---
--- Data for Name: actor; Type: TABLE DATA; Schema: public; Owner: postgres
---
 
 ALTER TABLE actor DISABLE TRIGGER ALL;
 
@@ -297,23 +227,10 @@ INSERT INTO actor (actor_id, first_name, last_name, last_update) VALUES (198, 'M
 INSERT INTO actor (actor_id, first_name, last_name, last_update) VALUES (199, 'JULIA', 'FAWCETT', '2006-02-15 09:34:33');
 INSERT INTO actor (actor_id, first_name, last_name, last_update) VALUES (200, 'THORA', 'TEMPLE', '2006-02-15 09:34:33');
 
-
-ALTER TABLE actor ENABLE TRIGGER ALL;
-
---
--- Data for Name: address; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE actor ENABLE TRIGGER ALL
 ALTER TABLE address DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE address ENABLE TRIGGER ALL;
-
---
--- Data for Name: category; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE address ENABLE TRIGGER ALL
 ALTER TABLE category DISABLE TRIGGER ALL;
 
 INSERT INTO category (category_id, name, last_update) VALUES (1, 'Action', '2006-02-15 09:46:27');
@@ -334,22 +251,11 @@ INSERT INTO category (category_id, name, last_update) VALUES (15, 'Sports', '200
 INSERT INTO category (category_id, name, last_update) VALUES (16, 'Travel', '2006-02-15 09:46:27');
 
 
-ALTER TABLE category ENABLE TRIGGER ALL;
-
---
--- Data for Name: city; Type: TABLE DATA; Schema: public; Owner: postgres
---
+ALTER TABLE category ENABLE TRIGGER ALL
 
 ALTER TABLE city DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE city ENABLE TRIGGER ALL;
-
---
--- Data for Name: country; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE city ENABLE TRIGGER ALL
 ALTER TABLE country DISABLE TRIGGER ALL;
 
 INSERT INTO country (country_id, country, last_update) VALUES (1, 'Afghanistan', '2006-02-15 09:44:00');
@@ -463,108 +369,34 @@ INSERT INTO country (country_id, country, last_update) VALUES (108, 'Yugoslavia'
 INSERT INTO country (country_id, country, last_update) VALUES (109, 'Zambia', '2006-02-15 09:44:00');
 
 
-ALTER TABLE country ENABLE TRIGGER ALL;
-
---
--- Data for Name: customer; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE country ENABLE TRIGGER ALL
 ALTER TABLE customer DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE customer ENABLE TRIGGER ALL;
-
---
--- Data for Name: film; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE customer ENABLE TRIGGER ALL
 ALTER TABLE film DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE film ENABLE TRIGGER ALL;
-
---
--- Data for Name: film_actor; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE film ENABLE TRIGGER ALL
 ALTER TABLE film_actor DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE film_actor ENABLE TRIGGER ALL;
-
---
--- Data for Name: film_category; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE film_actor ENABLE TRIGGER ALL
 ALTER TABLE film_category DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE film_category ENABLE TRIGGER ALL;
-
---
--- Data for Name: inventory; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE film_category ENABLE TRIGGER ALL
 ALTER TABLE inventory DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE inventory ENABLE TRIGGER ALL;
-
---
--- Data for Name: language; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE inventory ENABLE TRIGGER ALL
 ALTER TABLE language DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE language ENABLE TRIGGER ALL;
-
---
--- Data for Name: payment; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE language ENABLE TRIGGER ALL
 ALTER TABLE payment DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE payment ENABLE TRIGGER ALL;
-
---
--- Data for Name: rental; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE payment ENABLE TRIGGER ALL
 ALTER TABLE rental DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE rental ENABLE TRIGGER ALL;
-
---
--- Data for Name: staff; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE rental ENABLE TRIGGER ALL
 ALTER TABLE staff DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE staff ENABLE TRIGGER ALL;
-
---
--- Data for Name: store; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
+ALTER TABLE staff ENABLE TRIGGER ALL
 ALTER TABLE store DISABLE TRIGGER ALL;
 
-
-
-ALTER TABLE store ENABLE TRIGGER ALL;
-
---
--- PostgreSQL database dump complete
---
+ALTER TABLE store ENABLE TRIGGER ALL

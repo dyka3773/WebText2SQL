@@ -1,8 +1,3 @@
----
---- drop tables
----
-
-
 DROP TABLE IF EXISTS customer_customer_demo;
 DROP TABLE IF EXISTS customer_demographics;
 DROP TABLE IF EXISTS employee_territories;
@@ -18,10 +13,6 @@ DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS region;
 DROP TABLE IF EXISTS employees;
 
---
--- Name: categories; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
 CREATE TABLE northwind.categories (
     category_id smallint NOT NULL PRIMARY KEY,
     category_name character varying(15) NOT NULL,
@@ -29,20 +20,10 @@ CREATE TABLE northwind.categories (
     picture bytea
 );
 
-
---
--- Name: customer_demographics; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
 CREATE TABLE northwind.customer_demographics (
     customer_type_id bpchar NOT NULL PRIMARY KEY,
     customer_desc text
 );
-
-
---
--- Name: customers; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
 
 CREATE TABLE northwind.customers (
     customer_id bpchar NOT NULL PRIMARY KEY,
@@ -58,10 +39,6 @@ CREATE TABLE northwind.customers (
     fax character varying(24)
 );
 
---
--- Name: customer_customer_demo; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
 CREATE TABLE northwind.customer_customer_demo (
     customer_id bpchar NOT NULL,
     customer_type_id bpchar NOT NULL,
@@ -69,10 +46,6 @@ CREATE TABLE northwind.customer_customer_demo (
     FOREIGN KEY (customer_type_id) REFERENCES northwind.customer_demographics,
     FOREIGN KEY (customer_id) REFERENCES northwind.customers
 );
-
---
--- Name: employees; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
 
 CREATE TABLE northwind.employees (
     employee_id smallint NOT NULL PRIMARY KEY,
@@ -96,11 +69,6 @@ CREATE TABLE northwind.employees (
 	FOREIGN KEY (reports_to) REFERENCES northwind.employees
 );
 
-
---
--- Name: suppliers; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
 CREATE TABLE northwind.suppliers (
     supplier_id smallint NOT NULL PRIMARY KEY,
     company_name character varying(40) NOT NULL,
@@ -115,11 +83,6 @@ CREATE TABLE northwind.suppliers (
     fax character varying(24),
     homepage text
 );
-
-
---
--- Name: products; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
 
 CREATE TABLE northwind.products (
     product_id smallint NOT NULL PRIMARY KEY,
@@ -136,31 +99,16 @@ CREATE TABLE northwind.products (
 	FOREIGN KEY (supplier_id) REFERENCES northwind.suppliers
 );
 
-
---
--- Name: region; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
 CREATE TABLE northwind.region (
     region_id smallint NOT NULL PRIMARY KEY,
     region_description bpchar NOT NULL
 );
-
-
---
--- Name: shippers; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
 
 CREATE TABLE northwind.shippers (
     shipper_id smallint NOT NULL PRIMARY KEY,
     company_name character varying(40) NOT NULL,
     phone character varying(24)
 );
-
-
---
--- Name: orders; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
 
 CREATE TABLE northwind.orders (
     order_id smallint NOT NULL PRIMARY KEY,
@@ -182,22 +130,12 @@ CREATE TABLE northwind.orders (
     FOREIGN KEY (ship_via) REFERENCES northwind.shippers
 );
 
-
---
--- Name: territories; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
-
 CREATE TABLE northwind.territories (
     territory_id character varying(20) NOT NULL PRIMARY KEY,
     territory_description bpchar NOT NULL,
     region_id smallint NOT NULL,
 	FOREIGN KEY (region_id) REFERENCES northwind.region
 );
-
-
---
--- Name: employee_territories; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
 
 CREATE TABLE northwind.employee_territories (
     employee_id smallint NOT NULL,
@@ -206,11 +144,6 @@ CREATE TABLE northwind.employee_territories (
     FOREIGN KEY (territory_id) REFERENCES northwind.territories,
     FOREIGN KEY (employee_id) REFERENCES northwind.employees
 );
-
-
---
--- Name: order_details; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
 
 CREATE TABLE northwind.order_details (
     order_id smallint NOT NULL,
@@ -222,11 +155,6 @@ CREATE TABLE northwind.order_details (
     FOREIGN KEY (product_id) REFERENCES northwind.products,
     FOREIGN KEY (order_id) REFERENCES northwind.orders
 );
-
-
---
--- Name: us_states; Type: TABLE; Schema: public; Owner: -; Tablespace: 
---
 
 CREATE TABLE northwind.us_states (
     state_id smallint NOT NULL PRIMARY KEY,

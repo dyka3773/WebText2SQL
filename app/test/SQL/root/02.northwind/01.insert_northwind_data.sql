@@ -1,6 +1,3 @@
---
--- Data for Name: categories; Type: TABLE DATA; Schema: public; Owner: -
---
 
 INSERT INTO northwind.categories VALUES
 	(1, 'Beverages', 'Soft drinks, coffees, teas, beers, and ales', '\x'),
@@ -11,17 +8,6 @@ INSERT INTO northwind.categories VALUES
 	(6, 'Meat/Poultry', 'Prepared meats', '\x'),
 	(7, 'Produce', 'Dried fruit and bean curd', '\x'),
 	(8, 'Seafood', 'Seaweed and fish', '\x');
-
-
---
--- Data for Name: customer_demographics; Type: TABLE DATA; Schema: public; Owner: -
---
-
-
-
---
--- Data for Name: customers; Type: TABLE DATA; Schema: public; Owner: -
---
 
 INSERT INTO northwind.customers VALUES
 	('ALFKI', 'Alfreds Futterkiste', 'Maria Anders', 'Sales Representative', 'Obere Str. 57', 'Berlin', NULL, '12209', 'Germany', '030-0074321', '030-0076545'),
@@ -116,17 +102,6 @@ INSERT INTO northwind.customers VALUES
 	('WILMK', 'Wilman Kala', 'Matti Karttunen', 'Owner/Marketing Assistant', 'Keskuskatu 45', 'Helsinki', NULL, '21240', 'Finland', '90-224 8858', '90-224 8858'),
 	('WOLZA', 'Wolski  Zajazd', 'Zbyszek Piestrzeniewicz', 'Owner', 'ul. Filtrowa 68', 'Warszawa', NULL, '01-012', 'Poland', '(26) 642-7012', '(26) 642-7012');
 
-
---
--- Data for Name: customer_customer_demo; Type: TABLE DATA; Schema: public; Owner: -
---
-
-
-
---
--- Data for Name: employees; Type: TABLE DATA; Schema: public; Owner: -
---
-
 INSERT INTO northwind.employees VALUES
 	(2, 'Fuller', 'Andrew', 'Vice President, Sales', 'Dr.', '1952-02-19', '1992-08-14', '908 W. Capital Way', 'Tacoma', 'WA', '98401', 'USA', '(206) 555-9482', '3457', '\x', 'Andrew received his BTS commercial in 1974 and a Ph.D. in international marketing from the University of Dallas in 1981.  He is fluent in French and Italian and reads German.  He joined the company as a sales representative, was promoted to sales manager in January 1992 and to vice president of sales in March 1993.  Andrew is a member of the Sales Management Roundtable, the Seattle Chamber of Commerce, and the Pacific Rim Importers Association.', NULL, 'http://accweb/emmployees/fuller.bmp'),
 	(3, 'Leverling', 'Janet', 'Sales Representative', 'Ms.', '1963-08-30', '1992-04-01', '722 Moss Bay Blvd.', 'Kirkland', 'WA', '98033', 'USA', '(206) 555-3412', '3355', '\x', 'Janet has a BS degree in chemistry from Boston College (1984).  She has also completed a certificate program in food retailing management.  Janet was hired as a sales associate in 1991 and promoted to sales representative in February 1992.', 2, 'http://accweb/emmployees/leverling.bmp'),
@@ -138,21 +113,11 @@ INSERT INTO northwind.employees VALUES
 	(9, 'Dodsworth', 'Anne', 'Sales Representative', 'Ms.', '1966-01-27', '1994-11-15', '7 Houndstooth Rd.', 'London', NULL, 'WG2 7LT', 'UK', '(71) 555-4444', '452', '\x', 'Anne has a BA degree in English from St. Lawrence College.  She is fluent in French and German.', 5, 'http://accweb/emmployees/davolio.bmp'),
 	(1, 'Davolio', 'Nancy', 'Sales Representative', 'Ms.', '1948-12-08', '1992-05-01', '507 - 20th Ave. E.\nApt. 2A', 'Seattle', 'WA', '98122', 'USA', '(206) 555-9857', '5467', '\x', 'Education includes a BA in psychology from Colorado State University in 1970.  She also completed The Art of the Cold Call.  Nancy is a member of Toastmasters International.', 2, 'http://accweb/emmployees/davolio.bmp');
 
-
---
--- Data for Name: region; Type: TABLE DATA; Schema: public; Owner: -
---
-
 INSERT INTO northwind.region VALUES
 	(1, 'Eastern'),
 	(2, 'Western'),
 	(3, 'Northern'),
 	(4, 'Southern');
-
-
---
--- Data for Name: territories; Type: TABLE DATA; Schema: public; Owner: -
---
 
 INSERT INTO northwind.territories VALUES
 	('01581', 'Westboro', 1),
@@ -209,11 +174,6 @@ INSERT INTO northwind.territories VALUES
 	('98052', 'Redmond', 2),
 	('98104', 'Seattle', 2);
 
-
---
--- Data for Name: employee_territories; Type: TABLE DATA; Schema: public; Owner: -
---
-
 INSERT INTO northwind.employee_territories VALUES
 	(1, '06897'),
 	(1, '19713'),
@@ -265,11 +225,6 @@ INSERT INTO northwind.employee_territories VALUES
 	(9, '55113'),
 	(9, '55439');
 
-
---
--- Data for Name: shippers; Type: TABLE DATA; Schema: public; Owner: -
---
-
 INSERT INTO northwind.shippers VALUES
 	(1, 'Speedy Express', '(503) 555-9831'),
 	(2, 'United Package', '(503) 555-3199'),
@@ -277,11 +232,6 @@ INSERT INTO northwind.shippers VALUES
 	(4, 'Alliance Shippers', '1-800-222-0451'),
 	(5, 'UPS', '1-800-782-7892'),
 	(6, 'DHL', '1-800-225-5345');
-
-
---
--- Data for Name: orders; Type: TABLE DATA; Schema: public; Owner: -
---
 
 INSERT INTO northwind.orders VALUES
 	(10248, 'VINET', 5, '1996-07-04', '1996-08-01', '1996-07-16', 3, 32.38, 'Vins et alcools Chevalier', '59 rue de l''Abbaye', 'Reims', NULL, '51100', 'France'),
@@ -1115,11 +1065,6 @@ INSERT INTO northwind.orders VALUES
 	(11076, 'BONAP', 4, '1998-05-06', '1998-06-03', NULL, 2, 38.28, 'Bon app''', '12, rue des Bouchers', 'Marseille', NULL, '13008', 'France'),
 	(11077, 'RATTC', 1, '1998-05-06', '1998-06-03', NULL, 2, 8.53, 'Rattlesnake Canyon Grocery', '2817 Milton Dr.', 'Albuquerque', 'NM', '87110', 'USA');
 
-
---
--- Data for Name: suppliers; Type: TABLE DATA; Schema: public; Owner: -
---
-
 INSERT INTO northwind.suppliers VALUES
 	(1, 'Exotic Liquids', 'Charlotte Cooper', 'Purchasing Manager', '49 Gilbert St.', 'London', NULL, 'EC1 4SD', 'UK', '(171) 555-2222', NULL, NULL),
 	(2, 'New Orleans Cajun Delights', 'Shelley Burke', 'Order Administrator', 'P.O. Box 78934', 'New Orleans', 'LA', '70117', 'USA', '(100) 555-4822', NULL, '#CAJUN.HTM#'),
@@ -1150,11 +1095,6 @@ INSERT INTO northwind.suppliers VALUES
 	(27, 'Escargots Nouveaux', 'Marie Delamare', 'Sales Manager', '22, rue H. Voiron', 'Montceau', NULL, '71300', 'France', '85.57.00.07', NULL, NULL),
 	(28, 'Gai pâturage', 'Eliane Noz', 'Sales Representative', 'Bat. B 3, rue des Alpes', 'Annecy', NULL, '74000', 'France', '38.76.98.06', '38.76.98.58', NULL),
 	(29, 'Forêts d''érables', 'Chantal Goulet', 'Accounting Manager', '148 rue Chasseur', 'Ste-Hyacinthe', 'Québec', 'J2S 7S8', 'Canada', '(514) 555-2955', '(514) 555-2921', NULL);
-
-
---
--- Data for Name: products; Type: TABLE DATA; Schema: public; Owner: -
---
 
 INSERT INTO northwind.products VALUES
 	(1, 'Chai', 8, 1, '10 boxes x 30 bags', 18, 39, 0, 10, 1),
@@ -1234,11 +1174,6 @@ INSERT INTO northwind.products VALUES
 	(75, 'Rhönbräu Klosterbier', 12, 1, '24 - 0.5 l bottles', 7.75, 125, 0, 25, 0),
 	(76, 'Lakkalikööri', 23, 1, '500 ml', 18, 57, 0, 20, 0),
 	(77, 'Original Frankfurter grüne Soße', 12, 2, '12 boxes', 13, 32, 0, 15, 0);
-
-
---
--- Data for Name: order_details; Type: TABLE DATA; Schema: public; Owner: -
---
 
 INSERT INTO northwind.order_details VALUES
 	(10248, 11, 14, 12, 0),
@@ -3397,11 +3332,6 @@ INSERT INTO northwind.order_details VALUES
 	(11077, 75, 7.75, 4, 0),
 	(11077, 77, 13, 2, 0);
 
-
---
--- Data for Name: us_states; Type: TABLE DATA; Schema: public; Owner: -
---
-
 INSERT INTO northwind.us_states VALUES
 	(1, 'Alabama', 'AL', 'south'),
 	(2, 'Alaska', 'AK', 'north'),
@@ -3454,4 +3384,3 @@ INSERT INTO northwind.us_states VALUES
 	(49, 'West Virginia', 'WV', 'south'),
 	(50, 'Wisconsin', 'WI', 'midwest'),
 	(51, 'Wyoming', 'WY', 'west');
-    

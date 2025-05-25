@@ -89,6 +89,8 @@ lint.ignore = [
     "G004",     # Flake8-logging-format - Logging statement uses f-string
     # "W293",     # Pycodestyle - blank line contains whitespace
     "S608",    # Flake8-bandit - Possible SQL injection in f-string
+    "TD003",   # Flake8-todos - Missing issue link in TODO comment
+    "FIX002",  # Flake8-fixme - Line contains TODO, consider resolving the issue
 ]
 
 [format]

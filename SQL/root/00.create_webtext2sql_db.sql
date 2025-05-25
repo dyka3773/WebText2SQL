@@ -1,1 +1,0 @@
-CREATE DATABASE webtext2sql;

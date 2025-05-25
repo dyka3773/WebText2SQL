@@ -1,4 +1,3 @@
--- Εισαγωγή δεδομένων (γραμμών) στον πίνακα sailors.sailor
 INSERT INTO sailors.sailor(sid,sname,rating,age) VALUES (2, 'Γιάννης', 6, 17);
 INSERT INTO sailors.sailor(sid,sname,rating,age) VALUES (11, 'Μαρία', 10, 18);
 INSERT INTO sailors.sailor(sid,sname,rating,age) VALUES (12, 'Θανάσης', 7, 14);
@@ -11,15 +10,12 @@ INSERT INTO sailors.sailor(sid,sname,rating,age) VALUES (19,'Πολύκαρπο�
 INSERT INTO sailors.sailor(sid,sname,rating,age) VALUES (27,'Μαριάνθη',8,15);
 INSERT INTO sailors.sailor(sid,sname,rating,age) VALUES (37,'Κώστας',8,14);
 
-
--- Εισαγωγή δεδομένων (γραμμών) στον πίνακα sailors.marina
 INSERT INTO sailors.marina(mid,name,capacity) VALUES(33,'Πόρτο Καρράς',300);
 INSERT INTO sailors.marina(mid,name,capacity) VALUES(5,'Καλαμαριά',105);
 INSERT INTO sailors.marina(mid,name,capacity) VALUES(1,'Πλαταμώνας',32);
 INSERT INTO sailors.marina(mid,name,capacity) VALUES(7,'Ποσείδι',19);
 INSERT INTO sailors.marina(mid,name,capacity) VALUES(2,'Ουρανούπολις',105);
 
--- Εισαγωγή δεδομένων (γραμμών) στον πίνακα sailors.boat
 INSERT INTO sailors.boat(bid,bname,color) VALUES(88,'Σοφία','Blue');
 INSERT INTO sailors.boat(bid,bname,color) VALUES(17,'Αγ. Αικατερίνη','Light Green');
 INSERT INTO sailors.boat(bid,bname,color) VALUES(13,'Παναγής','Yellow');
@@ -28,7 +24,6 @@ INSERT INTO sailors.boat(bid,bname,color) VALUES(72,'Χριστινάκι','Red'
 INSERT INTO sailors.boat(bid,bname,color) VALUES(19,'Δήλος','Light Green');
 INSERT INTO sailors.boat(bid,bname,color) VALUES(77,'Αγ. Γεώργιος','Blue');
 
--- Εισαγωγή δεδομένων (γραμμών) στον πίνακα sailors.reservation
 INSERT INTO sailors.reservation(sid,bid,mid,r_date) VALUES(2,88,7,'1999-02-17');
 INSERT INTO sailors.reservation(sid,bid,mid,r_date) VALUES(12,17,2,'1998-05-17');
 INSERT INTO sailors.reservation(sid,bid,mid,r_date) VALUES(11,17,2,'1999-01-17');
