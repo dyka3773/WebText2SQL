@@ -2,9 +2,8 @@ import logging
 from typing import TYPE_CHECKING
 
 import chainlit as cl
-import psycopg as sql
-
 import db_controller
+import psycopg as sql
 
 if TYPE_CHECKING:
     from chainlit.types import AskActionResponse

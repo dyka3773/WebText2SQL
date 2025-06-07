@@ -10,8 +10,12 @@ dependencies = [
     "azure-storage-blob>=12.25.1",
     "cachetools>=5.5.2",
     "chainlit>=2.5.5",
+    "fastapi[all]>=0.115.12",
     "openai>=1.79.0",
+    "passlib[bcrypt]>=1.7.4",
     "psycopg[binary]>=3.2.9",
+    "python-jose>=3.5.0",
+    "python-multipart>=0.0.18",
 ]
 
 [dependency-groups]

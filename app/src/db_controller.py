@@ -1,9 +1,8 @@
 import logging
 
 import psycopg as sql
-from cachetools.func import ttl_cache
-
 import str_manipulation
+from cachetools.func import ttl_cache
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 
 logger = logging.getLogger("webtext2sql")

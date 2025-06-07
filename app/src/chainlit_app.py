@@ -1,17 +1,17 @@
 import os
 
 import chainlit as cl
+import custom_logging
 import psycopg as sql
 from chainlit.types import ThreadDict
 from dotenv import load_dotenv
-
-import custom_logging
+from fastapi import Request, Response
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 logger = custom_logging.setup_logger("webtext2sql")
 custom_logging.setup_logger("chainlit")
 
 import ai_controller
-import auth
 import chainlit_controller
 import db_controller
 import str_manipulation
@@ -20,21 +20,66 @@ load_dotenv()
 
 cl.instrument_openai()
 
+SECRET_KEY = os.getenv("SECRET_KEY")
+COOKIE_NAME = os.getenv("COOKIE_NAME")
+serializer = URLSafeTimedSerializer(SECRET_KEY)
 
-@cl.password_auth_callback
-def auth_callback(username: str, password: str) -> cl.User | None:
+
+@cl.header_auth_callback
+def auth_from_header(headers: dict) -> None | cl.User:
     """
-    Authenticate the user based on the provided username and password.
-    This function is called when a user tries to log in to the application.
+    Authenticate a user based on the session cookie in the request headers.
 
     Args:
-        username (str): The username provided by the user.
-        password (str): The password provided by the user.
+        headers (dict): The request headers containing the session cookie.
 
     Returns:
-        cl.User: An instance of the User class if authentication is successful, None otherwise.
+        None | cl.User: Returns a User object if authentication is successful, None otherwise.
     """
-    return auth.authenticate_user(username, password, os.getenv("TARGET_DATABASE_URL"))
+    cookie = headers.get("cookie")
+    if not cookie or COOKIE_NAME not in cookie:
+        return None
+
+    try:
+        # Parse cookie manually
+        cookies = dict(pair.split("=", 1) for pair in cookie.split("; "))
+        token = cookies.get(COOKIE_NAME)
+        email = serializer.loads(token, max_age=60 * 60 * 24)
+
+        from main import users_db  # Import the users_db from main.py
+
+        # TODO: Replace with a real database
+
+        user = users_db.get(email)
+
+        if not user:
+            logger.warning(f"User {email} not found in the database.")
+            return None
+
+        return cl.User(
+            identifier=email,
+            metadata={
+                "token": token,
+                "connections": user.get("connections", []),
+            },
+        )
+
+    except (BadSignature, SignatureExpired):
+        logger.exception("Invalid or expired session cookie.")
+        return None
+
+
+@cl.on_logout
+def logout(_: Request, response: Response) -> None:
+    """
+    Clear the user's session cookie when they log out.
+    This function is triggered when a user logs out of the application.
+
+    Args:
+        request (Request): The request object containing the user's session data.
+        response (Response): The response object to modify the user's session cookie.
+    """
+    response.delete_cookie(COOKIE_NAME)
 
 
 @cl.on_chat_resume
@@ -137,4 +182,7 @@ async def handle_message(message: cl.Message) -> None:
     answer = str_manipulation.form_answer(results, col_names, sql_query)
 
     # Step 5: Send the response back to the user
+    await cl.Message(content=answer).send()
+    await cl.Message(content=answer).send()
+    await cl.Message(content=answer).send()
     await cl.Message(content=answer).send()

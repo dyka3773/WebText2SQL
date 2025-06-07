@@ -2,7 +2,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from cachetools.func import ttl_cache
-
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 
 if TYPE_CHECKING:

@@ -43,4 +43,12 @@ def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     logger.propagate = False  # Prevent propagation to the root logger
     logger.info(f"Logger {name} has been set up")
 
+    if name == "uvicorn":  # Special case for uvicorn access logger
+        logger = logging.getLogger("uvicorn.access")
+
+        logger.addHandler(handler)
+
+        logger.propagate = False  # Prevent propagation to the root logger
+        logger.info("Logger uvicorn.access has been set up")
+
     return logger
