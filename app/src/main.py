@@ -1,16 +1,19 @@
 import os
-from typing import Annotated
+from collections.abc import Generator
+from typing import Annotated, Any
 
 import custom_logging
 from auth import hash_password, verify_password
 from chainlit.utils import mount_chainlit
+from controllers import app_users
 from dotenv import load_dotenv
-from fastapi import FastAPI, Form, Request, Response
+from fastapi import Depends, FastAPI, Form, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer
+from sqlmodel import Session, create_engine
 from starlette.templating import _TemplateResponse
 
 load_dotenv()
@@ -31,9 +34,16 @@ custom_logging.setup_logger("uvicorn")
 SECRET_KEY = os.getenv("SECRET_KEY")
 COOKIE_NAME = os.getenv("COOKIE_NAME")
 serializer = URLSafeTimedSerializer(SECRET_KEY)
+db_engine = create_engine(os.getenv("DATABASE_URL"))
 
-# TODO @dyka3773: Replace with a real database
-users_db = {}  # {email: {"email":..., "username":..., "hashed_password":...}}
+
+def get_session() -> Generator[Session, Any]:
+    with Session(db_engine) as session:
+        yield session
+
+
+SessionDep = Annotated[Session, Depends(get_session)]
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/public", StaticFiles(directory="public"), name="public")
@@ -49,6 +59,7 @@ def login_page(request: Request, error: str | None = None) -> _TemplateResponse:
 def login(
     response: Response,
     request: Request,
+    session: SessionDep,
     email: Annotated[str, Form()] = ...,
     password: Annotated[str, Form()] = ...,
 ) -> _TemplateResponse | RedirectResponse:
@@ -57,9 +68,9 @@ def login(
         error_message = "Email and password are required"
         return templates.TemplateResponse("login.html", {"request": request, "error": error_message}, status_code=400)
 
-    user = users_db.get(email)
+    user = app_users.get_app_user_by_email(email=email, session=session)
 
-    if not user or not verify_password(password, user["hashed_password"]):
+    if not user or not verify_password(password, user.hashed_password):
         error_message = "Password is incorrect"
 
         if not user:
@@ -87,6 +98,7 @@ def register_page(request: Request, error: str | None = None) -> _TemplateRespon
 def register(
     response: Response,
     request: Request,
+    session: SessionDep,
     email: Annotated[str, Form()] = ...,
     password: Annotated[str, Form()] = ...,
 ) -> _TemplateResponse | RedirectResponse:
@@ -95,12 +107,20 @@ def register(
         error_message = "Email and password are required"
         return templates.TemplateResponse("register.html", {"request": request, "error": error_message}, status_code=400)
 
-    if email in users_db:
+    if app_users.app_user_exists(email=email, session=session):
         error_message = "User already exists"
         logger.warning(f"Registration failed: User already exists with email {email}")
         return templates.TemplateResponse("register.html", {"request": request, "error": error_message}, status_code=400)
 
-    users_db[email] = {"email": email, "username": email.split("@")[0], "hashed_password": hash_password(password)}
+    # Create a new user
+    app_users.insert_app_user(
+        app_users.AppUser(
+            email=email,
+            username=email.split("@")[0],
+            hashed_password=hash_password(password),
+        ),
+        session=session,
+    )
 
     token = serializer.dumps(email)
     response = RedirectResponse(url="/chainlit", status_code=302)

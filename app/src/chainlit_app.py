@@ -6,7 +6,8 @@ import psycopg as sql
 from chainlit.types import ThreadDict
 from dotenv import load_dotenv
 from fastapi import Request, Response
-from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from itsdangerous import BadSignature, SignatureExpired
+from sqlmodel import Session, create_engine
 
 logger = custom_logging.setup_logger("webtext2sql")
 custom_logging.setup_logger("chainlit")
@@ -15,14 +16,12 @@ import ai_controller
 import chainlit_controller
 import db_controller
 import str_manipulation
+from controllers import app_users, user_connections
+from main import COOKIE_NAME, serializer
 
 load_dotenv()
 
 cl.instrument_openai()
-
-SECRET_KEY = os.getenv("SECRET_KEY")
-COOKIE_NAME = os.getenv("COOKIE_NAME")
-serializer = URLSafeTimedSerializer(SECRET_KEY)
 
 
 @cl.header_auth_callback
@@ -46,23 +45,26 @@ def auth_from_header(headers: dict) -> None | cl.User:
         token = cookies.get(COOKIE_NAME)
         email = serializer.loads(token, max_age=60 * 60 * 24)
 
-        from main import users_db  # Import the users_db from main.py
-
-        # TODO: Replace with a real database
-
-        user = users_db.get(email)
-
-        if not user:
-            logger.warning(f"User {email} not found in the database.")
+        if not email:  # I think this is redundant (due to the exception handling), but just in case
+            logger.warning("Session cookie is invalid or expired.")
             return None
 
-        return cl.User(
-            identifier=email,
-            metadata={
-                "token": token,
-                "connections": user.get("connections", []),
-            },
-        )
+        db_engine = create_engine(os.getenv("DATABASE_URL"))
+
+        with Session(db_engine) as session:
+            user = app_users.get_app_user_by_email(email, session)
+
+            if not user:
+                logger.warning(f"User {email} not found in the database.")
+                return None
+
+            return cl.User(
+                identifier=email,
+                metadata={
+                    "token": token,
+                    "connections": user_connections.get_user_connections_by_email(email, session),
+                },
+            )
 
     except (BadSignature, SignatureExpired):
         logger.exception("Invalid or expired session cookie.")
@@ -182,7 +184,4 @@ async def handle_message(message: cl.Message) -> None:
     answer = str_manipulation.form_answer(results, col_names, sql_query)
 
     # Step 5: Send the response back to the user
-    await cl.Message(content=answer).send()
-    await cl.Message(content=answer).send()
-    await cl.Message(content=answer).send()
     await cl.Message(content=answer).send()
