@@ -274,11 +274,10 @@ def try_establish_connection(connection_info: dict) -> bool:
     Returns:
         bool: True if the connection was successful, False otherwise.
     """
+    tcp_details = connection_info["tcp"]
     try:
         # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
-
-        logger.info(f"{connection_info}")
-        with sql.connect(**connection_info) as _:
+        with sql.connect(**tcp_details) as _:
             logger.debug("Connection established successfully.")
             return True
     except sql.Error:

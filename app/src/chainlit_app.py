@@ -123,7 +123,7 @@ async def handle_message(message: cl.Message) -> None:
     # Step 1: Find Metadata from db according to the user
     conn_info = chainlit_controller.get_user_connection_info()
 
-    connection: sql.Connection = sql.connect(**conn_info)  # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
+    connection: sql.Connection = sql.connect(**conn_info["tcp"])  # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
 
     schema = cl.user_session.get("curr_db_schema")
 

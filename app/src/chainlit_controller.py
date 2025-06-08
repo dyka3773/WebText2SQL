@@ -27,7 +27,7 @@ def get_user_connection_info() -> dict:
         logger.error("No connection info found for the user.")
         return {}
 
-    return conn_info["tcp"]  # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
+    return conn_info
 
 
 def get_available_schemas_for_curr_server() -> list[str]:
@@ -43,7 +43,7 @@ def get_available_schemas_for_curr_server() -> list[str]:
         return []
 
     # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
-    connection = sql.connect(**conn_info)
+    connection: sql.Connection = sql.connect(**conn_info["tcp"])
 
     return db_controller.get_available_dbs(connection, conn_info["user"])
 
@@ -122,6 +122,7 @@ async def handle_db_selection() -> None:
         # Step 3: Set the selected connection info as a context variable for this user
         cl.user_session.set("curr_conn_info", selected_conn_info)
 
+        # TODO #36 @dyka3773: If we're working with MySQL there are no schemas
         await handle_schema_selection()
 
 
@@ -175,8 +176,7 @@ async def ask_and_store_connection_details(connection_type: str) -> None:
 
     conn_info["type"] = connection_type
 
-    # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
-    can_establish_connection = db_controller.try_establish_connection(conn_info["tcp"])
+    can_establish_connection = db_controller.try_establish_connection(conn_info)
 
     if not can_establish_connection:
         await cl.Message(content="Failed to establish a connection with the provided information. Please try again.").send()
