@@ -1,9 +1,13 @@
 import logging
+import os
 from typing import TYPE_CHECKING
 
 import chainlit as cl
 import db_controller
 import psycopg as sql
+from controllers import user_connections
+from controllers.user_connections import UserConnection
+from sqlmodel import Session, create_engine
 
 if TYPE_CHECKING:
     from chainlit.types import AskActionResponse
@@ -18,23 +22,15 @@ def get_user_connection_info() -> dict:
     Returns:
         dict: Connection information including host, port, database, user, and password.
     """
-    user = cl.user_session.get("user")
-    if not user:
-        logger.error("User not found in session.")
+    conn_info: dict = cl.user_session.get("curr_conn_info")
+    if not conn_info:
+        logger.error("No connection info found for the user.")
         return {}
 
-    conn_info: dict = user.metadata["conn_info"]
-    password: str = user.metadata["password"]
-
-    if not conn_info or not password:
-        logger.error("Connection info or password not found in session.")
-        return {}
-
-    conn_info["password"] = password
-    return conn_info
+    return conn_info["tcp"]  # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
 
 
-def get_available_schemas_for_curr_user() -> list[str]:
+def get_available_schemas_for_curr_server() -> list[str]:
     """
     Retrieve the names of all database schemas available to the current user.
 
@@ -46,25 +42,185 @@ def get_available_schemas_for_curr_user() -> list[str]:
         logger.error("No connection info found for the user.")
         return []
 
+    # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
     connection = sql.connect(**conn_info)
 
     return db_controller.get_available_dbs(connection, conn_info["user"])
 
 
-async def handle_schema_selection(schema_btns: list[cl.Action]) -> None:
-    """
-    Handle the schema selection by the user.
+async def new_connection_or_reconnect_to_schema() -> None:
+    """Create a new database connection or reconnect to a previously connected schema."""
+    choice_btns: list[cl.Action] = [
+        cl.Action(
+            name="new_connection",
+            payload={"value": "new_connection"},
+            label="Connect to a new database",
+        ),
+        cl.Action(
+            name="reconnect",
+            payload={"value": "reconnect"},
+            label="Reconnect to a previously connected schema",
+        ),
+    ]
+    res: AskActionResponse | None = None
+    while not res:  # This is needed because sometimes the response is time-ing out and we get None
+        res = await cl.AskActionMessage(
+            content="Do you want to connect to a new database or reconnect to a previously connected schema?",
+            actions=choice_btns,
+        ).send()
 
-    Args:
-        schema_btns (list[cl.Action]): List of schema buttons to be displayed to the user.
-    """
+    action = res.get("payload").get("value")
+
+    if action == "new_connection":
+        await handle_new_connection()
+    elif action == "reconnect":
+        await handle_db_selection()
+
+
+async def handle_db_selection() -> None:
+    """Present the user with a list of previously connected databases and allow them to select one."""
+    db_engine = create_engine(os.getenv("DATABASE_URL"))
+    with Session(db_engine) as session:
+        user_connections_list: list[UserConnection] = user_connections.get_user_connections_by_email(
+            email=cl.user_session.get("user").identifier,
+            session=session,
+        )
+        if not user_connections_list:
+            await cl.Message(
+                content="You have no previously connected databases. Please connect to a new database.",
+            ).send()
+            await handle_new_connection()
+            return
+
+    # Create action buttons for each previously connected database
+    db_btns: list[cl.Action] = [
+        cl.Action(
+            name=f"{conn.server_name} Queries",
+            payload={
+                "value": {
+                    "type": "ssh" if conn.ssh_connection_info else "tcp",
+                    "ssh": conn.ssh_connection_info,
+                    "tcp": conn.tcp_connection_info,
+                }
+            },
+            label=f"{conn.server_name}",
+        )
+        for conn in user_connections_list
+    ]
+
+    # Step 1: Send a blocking message to the user with the list of available databases
+    res: AskActionResponse | None = None
+    while not res:  # This is needed because sometimes the response is time-ing out and we get None
+        res = await cl.AskActionMessage(
+            content="Please choose a previously connected database to work with:",
+            actions=db_btns,
+        ).send()
+
+    # Step 2: Get the selected database connection info from the action payload
+    selected_conn_info = res.get("payload").get("value")
+    if selected_conn_info:
+        # Step 3: Set the selected connection info as a context variable for this user
+        cl.user_session.set("curr_conn_info", selected_conn_info)
+
+        await handle_schema_selection()
+
+
+async def handle_new_connection() -> None:
+    """Handle the creation of a new database connection."""
+    # Ask the user if they want TCP/IP or SSH connection
+    connection_type_btns: list[cl.Action] = [
+        cl.Action(
+            name="tcp",
+            payload={"value": "tcp"},
+            label="TCP/IP Connection",
+        ),
+        cl.Action(
+            name="ssh",
+            payload={"value": "ssh"},
+            label="SSH Tunnel Connection",
+        ),
+    ]
+
+    res: AskActionResponse | None = None
+    while not res:  # This is needed because sometimes the response is time-ing out and we get None
+        res = await cl.AskActionMessage(
+            content="Do you want to connect to the database using a TCP/IP connection or an SSH tunnel?",
+            actions=connection_type_btns,
+        ).send()
+
+    connection_type = res.get("payload").get("value")
+
+    await ask_and_store_connection_details(connection_type)
+
+    # TODO: check here if the connection was successful and if not, ask the user to try again
+
+    await handle_schema_selection()
+
+
+async def ask_and_store_connection_details(connection_type: str) -> None:
+    """Handle the connection to the database by asking for the necessary information and then storing it."""
+    if connection_type not in ["tcp", "ssh"]:
+        await cl.Message(content="Invalid connection type selected. Please try again.").send()
+        return
+
+    conn_info: dict = {}
+
+    if connection_type == "ssh":
+        # Ask for SSH and TCP connection details
+        # Note: The SSH connection info will be used to create a tunnel to the database server
+        conn_info["ssh"] = await ask_for_the_ssh_connection_info()
+        conn_info["tcp"] = await ask_for_the_tcp_connection_info()
+    elif connection_type == "tcp":
+        conn_info["tcp"] = await ask_for_the_tcp_connection_info()
+
+    conn_info["type"] = connection_type
+
+    # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
+    can_establish_connection = db_controller.try_establish_connection(conn_info["tcp"])
+
+    if not can_establish_connection:
+        await cl.Message(content="Failed to establish a connection with the provided information. Please try again.").send()
+        return
+
+    # Save the connection info in the user session
+    cl.user_session.set("curr_conn_info", conn_info)
+
+    # Save the connection info in the database
+    db_engine = create_engine(os.getenv("DATABASE_URL"))
+
+    with Session(db_engine) as session:
+        user_connections.insert_user_connection(
+            user_connection=UserConnection(
+                user_email=cl.user_session.get("user").identifier,
+                server_name=conn_info["tcp"].get("host", "unknown_server"),
+                ssh_connection_info=conn_info["ssh"] if connection_type == "ssh" else {},
+                tcp_connection_info=conn_info["tcp"] if connection_type == "tcp" else {},
+            ),
+            session=session,
+        )
+
+
+async def handle_schema_selection() -> None:
+    """Handle the schema selection by the user."""
+    # Get the list of available database schemas from the database controller
+    db_list = get_available_schemas_for_curr_server()
+    if not db_list:
+        logger.error(f"No database schemas found for the user: {cl.user_session.get('curr_conn_info').get('tcp', {}).get('user')}")
+        await cl.Message(content="No database schemas found for you on this database server. Please try again.").send()
+        return
+
+    # Create action buttons for each schema
+    schema_btns: list[cl.Action] = [
+        cl.Action(
+            name=f"{db_name} Queries",
+            payload={"value": db_name},
+            label=f"{db_name}",
+        )
+        for db_name in db_list
+    ]
+
     # Step 1: Send a blocking message to the user with the list of available schemas
-    res: AskActionResponse | None = await cl.AskActionMessage(
-        content="Please choose a database schema to work with before sending any messages:",
-        actions=schema_btns,
-    ).send()
-
-    # If the user doesn't select a schema, wait for them to do so
+    res: AskActionResponse | None = None
     while not res:  # This is needed because sometimes the response is time-ing out and we get None
         res = await cl.AskActionMessage(
             content="Please choose a database schema to work with before sending any messages:",
@@ -75,7 +231,7 @@ async def handle_schema_selection(schema_btns: list[cl.Action]) -> None:
     schema_to_work_with = res.get("payload").get("value")
     if schema_to_work_with:
         # Step 3: Set the selected schema as a context variable for this user
-        cl.user_session.set("db_schema", schema_to_work_with)
+        cl.user_session.set("curr_db_schema", schema_to_work_with)
 
         # Step 4: Send a message to the user confirming the selection
         await cl.Message(
@@ -83,3 +239,74 @@ async def handle_schema_selection(schema_btns: list[cl.Action]) -> None:
         ).send()
     else:
         await cl.Message(content="No database selected. Please choose a database to work with.").send()
+
+
+async def ask_for_the_ssh_connection_info() -> dict:
+    """
+    Ask the user for SSH connection details and return them as a dictionary.
+
+    Returns:
+        dict: A dictionary containing the SSH connection details.
+    """
+    ssh_info: dict = {}
+
+    ssh_host = await cl.AskUserMessage(
+        content="Please enter the SSH host (e.g., `ssh.example.com`):",
+    ).send()
+
+    ssh_port = await cl.AskUserMessage(
+        content="Please enter the SSH port (e.g., `22`):",
+    ).send()
+
+    ssh_user = await cl.AskUserMessage(
+        content="Please enter the SSH username:",
+    ).send()
+
+    ssh_password = await cl.AskUserMessage(
+        content="Please enter the SSH password:",
+    ).send()
+
+    ssh_info["ssh_host"] = ssh_host.get("output")
+    ssh_info["ssh_port"] = int(ssh_port.get("output"))
+    ssh_info["ssh_user"] = ssh_user.get("output")
+    ssh_info["ssh_password"] = ssh_password.get("output")
+
+    return ssh_info
+
+
+async def ask_for_the_tcp_connection_info() -> dict:
+    """
+    Ask the user for TCP connection details and return them as a dictionary.
+
+    Returns:
+        dict: A dictionary containing the TCP connection details.
+    """
+    tcp_info: dict = {}
+
+    host = await cl.AskUserMessage(
+        content="Please enter the database host or IP address (e.g., `db.example.com` or `127.0.0.1`):",
+    ).send()
+
+    port = await cl.AskUserMessage(
+        content="Please enter the database port (e.g., `5432`):",
+    ).send()
+
+    dbname = await cl.AskUserMessage(
+        content="Please enter the database name:",
+    ).send()
+
+    user = await cl.AskUserMessage(
+        content="Please enter the database username:",
+    ).send()
+
+    password = await cl.AskUserMessage(
+        content="Please enter the database password:",
+    ).send()
+
+    tcp_info["host"] = host.get("output")
+    tcp_info["port"] = int(port.get("output"))
+    tcp_info["dbname"] = dbname.get("output")
+    tcp_info["user"] = user.get("output")
+    tcp_info["password"] = password.get("output")
+
+    return tcp_info

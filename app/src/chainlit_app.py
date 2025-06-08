@@ -16,7 +16,7 @@ import ai_controller
 import chainlit_controller
 import db_controller
 import str_manipulation
-from controllers import app_users, user_connections
+from controllers import app_users
 from main import COOKIE_NAME, serializer
 
 load_dotenv()
@@ -52,7 +52,7 @@ def auth_from_header(headers: dict) -> None | cl.User:
         db_engine = create_engine(os.getenv("DATABASE_URL"))
 
         with Session(db_engine) as session:
-            user = app_users.get_app_user_by_email(email, session)
+            user: app_users.AppUser | None = app_users.get_app_user_by_email(email, session)
 
             if not user:
                 logger.warning(f"User {email} not found in the database.")
@@ -62,7 +62,7 @@ def auth_from_header(headers: dict) -> None | cl.User:
                 identifier=email,
                 metadata={
                     "token": token,
-                    "connections": user_connections.get_user_connections_by_email(email, session),
+                    "curr_conn_info": None,
                 },
             )
 
@@ -97,34 +97,16 @@ async def on_chat_resume(thread: ThreadDict) -> None:
 
 
 @cl.on_chat_start
-async def force_user_to_choose_db_schema_for_this_chat() -> None:
+async def new_thread_opened() -> None:
     """
-    Present the available database schemas to the user when the chat starts.
+    Create a new database connection or connect to a previously connected schema.
     This function is triggered when a new chat session begins.
 
     Args:
         thread: The thread object representing the chat session.
     """
     logger.debug(f"Chat started by User: {cl.user_session.get('user').identifier}")
-    # Get the list of available database schemas from the database controller
-    db_list = chainlit_controller.get_available_schemas_for_curr_user()
-
-    if not db_list:
-        logger.error(f"No database schemas found for the user: {cl.user_session.get('user').identifier}")
-        await cl.Message(content="No database schemas found for you. Please log in again.").send()
-        return
-
-    action_btns: list[cl.Action] = [
-        cl.Action(
-            name=f"{db_name} Queries",
-            payload={"value": db_name},
-            label=f"{db_name}",
-        )
-        for db_name in db_list
-    ]
-
-    # Make the user select a schema to work with before sending any messages
-    await chainlit_controller.handle_schema_selection(action_btns)
+    await chainlit_controller.new_connection_or_reconnect_to_schema()
 
 
 @cl.on_message
@@ -141,15 +123,9 @@ async def handle_message(message: cl.Message) -> None:
     # Step 1: Find Metadata from db according to the user
     conn_info = chainlit_controller.get_user_connection_info()
 
-    if not conn_info:  # I don't know if this can happen, but just in case
-        logger.error("Connection info not found for the user but the user is logged in.")
-        await cl.Message(content="Database connection lost. Please try again later.").send()
-        return
+    connection: sql.Connection = sql.connect(**conn_info)  # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
 
-    connection: sql.Connection = sql.connect(**conn_info)
-
-    # I'm kinda worried this might not be set correctly and that it takes the schema from the user session and not the thread session
-    schema = cl.user_session.get("db_schema")
+    schema = cl.user_session.get("curr_db_schema")
 
     logger.debug("Fetching metadata from the database")
     metadata: list[str] = db_controller.get_db_metadata(connection, schema, conn_info["user"])

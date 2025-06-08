@@ -262,3 +262,25 @@ def get_db_metadata(connection: sql.Connection, schema: str | None = None, user:
             continue
 
     return metadata
+
+
+def try_establish_connection(connection_info: dict) -> bool:
+    """
+    Attempt to establish a connection to the database using the provided connection info.
+
+    Args:
+        connection_info (dict): A dictionary containing connection parameters such as host, port, user, password, and database.
+
+    Returns:
+        bool: True if the connection was successful, False otherwise.
+    """
+    try:
+        # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
+
+        logger.info(f"{connection_info}")
+        with sql.connect(**connection_info) as _:
+            logger.debug("Connection established successfully.")
+            return True
+    except sql.Error:
+        logger.exception("Failed to establish a connection.")
+        return False

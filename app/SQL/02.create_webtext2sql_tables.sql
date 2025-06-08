@@ -15,7 +15,9 @@ CREATE TABLE "USER_CONNECTIONS" (
     "id" TEXT NOT NULL DEFAULT gen_random_uuid(),
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "user_email" TEXT NOT NULL,
-    "connection" JSONB,  -- I know this is not normalized properly, but using a whole different table for this would be an overkill
+    "server_name" TEXT NOT NULL,
+    "ssh_connection_info" JSONB,
+    "tcp_connection_info" JSONB,  -- I know this is not normalized properly, but using a whole different table for this would be an overkill
 
     CONSTRAINT "USER_CONNECTIONS_PK" PRIMARY KEY ("id")
 );
