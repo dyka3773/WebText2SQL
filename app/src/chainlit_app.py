@@ -1,40 +1,87 @@
 import os
 
 import chainlit as cl
+import custom_logging
 import psycopg as sql
 from chainlit.types import ThreadDict
 from dotenv import load_dotenv
-
-import custom_logging
+from fastapi import Request, Response
+from itsdangerous import BadSignature, SignatureExpired
+from sqlmodel import Session, create_engine
 
 logger = custom_logging.setup_logger("webtext2sql")
 custom_logging.setup_logger("chainlit")
 
 import ai_controller
-import auth
 import chainlit_controller
 import db_controller
 import str_manipulation
+from controllers import app_users
+from main import COOKIE_NAME, serializer
 
 load_dotenv()
 
 cl.instrument_openai()
 
 
-@cl.password_auth_callback
-def auth_callback(username: str, password: str) -> cl.User | None:
+@cl.header_auth_callback
+def auth_from_header(headers: dict) -> None | cl.User:
     """
-    Authenticate the user based on the provided username and password.
-    This function is called when a user tries to log in to the application.
+    Authenticate a user based on the session cookie in the request headers.
 
     Args:
-        username (str): The username provided by the user.
-        password (str): The password provided by the user.
+        headers (dict): The request headers containing the session cookie.
 
     Returns:
-        cl.User: An instance of the User class if authentication is successful, None otherwise.
+        None | cl.User: Returns a User object if authentication is successful, None otherwise.
     """
-    return auth.authenticate_user(username, password, os.getenv("TARGET_DATABASE_URL"))
+    cookie = headers.get("cookie")
+    if not cookie or COOKIE_NAME not in cookie:
+        return None
+
+    try:
+        # Parse cookie manually
+        cookies = dict(pair.split("=", 1) for pair in cookie.split("; "))
+        token = cookies.get(COOKIE_NAME)
+        email = serializer.loads(token, max_age=60 * 60 * 24)
+
+        if not email:  # I think this is redundant (due to the exception handling), but just in case
+            logger.warning("Session cookie is invalid or expired.")
+            return None
+
+        db_engine = create_engine(os.getenv("DATABASE_URL"))
+
+        with Session(db_engine) as session:
+            user: app_users.AppUser | None = app_users.get_app_user_by_email(email, session)
+
+            if not user:
+                logger.warning(f"User {email} not found in the database.")
+                return None
+
+            return cl.User(
+                identifier=email,
+                metadata={
+                    "token": token,
+                    "curr_conn_info": None,
+                },
+            )
+
+    except (BadSignature, SignatureExpired):
+        logger.exception("Invalid or expired session cookie.")
+        return None
+
+
+@cl.on_logout
+def logout(_: Request, response: Response) -> None:
+    """
+    Clear the user's session cookie when they log out.
+    This function is triggered when a user logs out of the application.
+
+    Args:
+        request (Request): The request object containing the user's session data.
+        response (Response): The response object to modify the user's session cookie.
+    """
+    response.delete_cookie(COOKIE_NAME)
 
 
 @cl.on_chat_resume
@@ -50,34 +97,16 @@ async def on_chat_resume(thread: ThreadDict) -> None:
 
 
 @cl.on_chat_start
-async def force_user_to_choose_db_schema_for_this_chat() -> None:
+async def new_thread_opened() -> None:
     """
-    Present the available database schemas to the user when the chat starts.
+    Create a new database connection or connect to a previously connected schema.
     This function is triggered when a new chat session begins.
 
     Args:
         thread: The thread object representing the chat session.
     """
     logger.debug(f"Chat started by User: {cl.user_session.get('user').identifier}")
-    # Get the list of available database schemas from the database controller
-    db_list = chainlit_controller.get_available_schemas_for_curr_user()
-
-    if not db_list:
-        logger.error(f"No database schemas found for the user: {cl.user_session.get('user').identifier}")
-        await cl.Message(content="No database schemas found for you. Please log in again.").send()
-        return
-
-    action_btns: list[cl.Action] = [
-        cl.Action(
-            name=f"{db_name} Queries",
-            payload={"value": db_name},
-            label=f"{db_name}",
-        )
-        for db_name in db_list
-    ]
-
-    # Make the user select a schema to work with before sending any messages
-    await chainlit_controller.handle_schema_selection(action_btns)
+    await chainlit_controller.new_connection_or_reconnect_to_schema()
 
 
 @cl.on_message
@@ -94,15 +123,9 @@ async def handle_message(message: cl.Message) -> None:
     # Step 1: Find Metadata from db according to the user
     conn_info = chainlit_controller.get_user_connection_info()
 
-    if not conn_info:  # I don't know if this can happen, but just in case
-        logger.error("Connection info not found for the user but the user is logged in.")
-        await cl.Message(content="Database connection lost. Please try again later.").send()
-        return
+    connection: sql.Connection = sql.connect(**conn_info)  # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
 
-    connection: sql.Connection = sql.connect(**conn_info)
-
-    # I'm kinda worried this might not be set correctly and that it takes the schema from the user session and not the thread session
-    schema = cl.user_session.get("db_schema")
+    schema = cl.user_session.get("curr_db_schema")
 
     logger.debug("Fetching metadata from the database")
     metadata: list[str] = db_controller.get_db_metadata(connection, schema, conn_info["user"])

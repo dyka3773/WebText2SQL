@@ -1,9 +1,8 @@
 import logging
 
 import psycopg as sql
-from cachetools.func import ttl_cache
-
 import str_manipulation
+from cachetools.func import ttl_cache
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 
 logger = logging.getLogger("webtext2sql")
@@ -79,14 +78,14 @@ def fetch_data(query: str, connection: sql.Connection) -> tuple[tuple[tuple], tu
 
 
 @ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
-def _get_db_tables_for_user(connection: sql.Connection, schema: str = "northwind", user: str = "test_user") -> list[str]:
+def _get_db_tables_for_user(connection: sql.Connection, schema: str | None = None, user: str | None = None) -> list[tuple]:
     """
     Retrieve the names of all tables in the database.
 
     Args:
         connection (psycopg.Connection): psycopg connection object.
-        schema (str): Schema name. Default is 'northwind'.
-        user (str): The username for which to retrieve the tables. Default is 'test_user'.
+        schema (str): Schema name.
+        user (str): The username for which to retrieve the tables.
 
     Returns:
         list: list of table names.
@@ -107,14 +106,14 @@ def _get_db_tables_for_user(connection: sql.Connection, schema: str = "northwind
 
 
 @ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
-def _get_table_metadata(table_name: str, connection: sql.Connection, schema: str = "northwind") -> str:
+def _get_table_metadata(table_name: str, connection: sql.Connection, schema: str | None = None) -> str:
     """
     Get DDL of the table.
 
     Args:
         table_name (str): Name of the table.
         connection (psycopg.Connection): psycopg connection object.
-        schema (str): Schema name. Default is 'northwind'.
+        schema (str): Schema name.
 
     Returns:
         str: DDL of the table.
@@ -222,19 +221,18 @@ def _get_table_metadata(table_name: str, connection: sql.Connection, schema: str
 
 
 @ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
-def get_db_metadata(connection: sql.Connection, schema: str = "northwind", user: str = "test_user") -> list:
+def get_db_metadata(connection: sql.Connection, schema: str | None = None, user: str | None = None) -> list[str]:
     """
     Retrieve the metadata of the database tables available to the user in a given schema.
 
     Args:
         connection (psycopg.Connection): psycopg connection object.
-        schema (str): Schema name. Default is 'northwind'.
-        user (str): The username for which to retrieve the metadata. Default is 'test_user'.
+        schema (str): Schema name.
+        user (str): The username for which to retrieve the metadata.
 
     Returns:
         list: list of table DDL strings.
     """
-    # TODO @dyka3773: Remove the default values for schema and user everywhere in the code.
     logger.debug("Fetching all database tables available to the user")
     tables: list[tuple] = _get_db_tables_for_user(connection, schema=schema, user=user)
 
@@ -264,3 +262,25 @@ def get_db_metadata(connection: sql.Connection, schema: str = "northwind", user:
             continue
 
     return metadata
+
+
+def try_establish_connection(connection_info: dict) -> bool:
+    """
+    Attempt to establish a connection to the database using the provided connection info.
+
+    Args:
+        connection_info (dict): A dictionary containing connection parameters such as host, port, user, password, and database.
+
+    Returns:
+        bool: True if the connection was successful, False otherwise.
+    """
+    try:
+        # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
+
+        logger.info(f"{connection_info}")
+        with sql.connect(**connection_info) as _:
+            logger.debug("Connection established successfully.")
+            return True
+    except sql.Error:
+        logger.exception("Failed to establish a connection.")
+        return False
