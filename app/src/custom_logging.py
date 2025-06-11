@@ -19,12 +19,13 @@ def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
         "%(asctime)s - %(threadName)s:%(thread)d - %(module)s:%(lineno)d - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
+    LOGFILES_DIR_NAME = ".logs"
 
-    if not Path("logfiles").exists():
-        Path("logfiles").mkdir(parents=True)
+    if not Path(LOGFILES_DIR_NAME).exists():
+        Path(LOGFILES_DIR_NAME).mkdir(parents=True)
 
     handler = RotatingFileHandler(
-        f"./logfiles/{name}.log",
+        f"./{LOGFILES_DIR_NAME}/{name}.log",
         maxBytes=1 * 1024 * 1024,  # 1 MB
         backupCount=5,  # Keep 5 backup files
     )

@@ -274,7 +274,8 @@ def try_establish_connection(connection_info: dict) -> bool:
     Returns:
         bool: True if the connection was successful, False otherwise.
     """
-    tcp_details = connection_info["tcp"]
+    tcp_details = connection_info["tcp"].copy()
+    tcp_details.pop("type_of_db", None)  # Remove type_of_db if it exists, as psycopg does not use it
     try:
         # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
         with sql.connect(**tcp_details) as _:

@@ -3,10 +3,11 @@ import os
 from typing import TYPE_CHECKING
 
 import chainlit as cl
-import db_controller
-import psycopg as sql
+import mysql.connector
+import psycopg
 from controllers import user_connections
 from controllers.user_connections import UserConnection
+from db_controllers import mysql_controller, pg_controller
 from sqlmodel import Session, create_engine
 
 if TYPE_CHECKING:
@@ -43,9 +44,19 @@ def get_available_schemas_for_curr_server() -> list[str]:
         return []
 
     # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
-    connection: sql.Connection = sql.connect(**conn_info["tcp"])
+    tcp_info = conn_info["tcp"].copy()
+    type_of_db = tcp_info.pop("type_of_db")
 
-    return db_controller.get_available_dbs(connection, conn_info["user"])
+    if type_of_db == "postgres":
+        connection: psycopg.Connection = psycopg.connect(**tcp_info)
+        # For PostgreSQL, get the list of available schemas
+        return pg_controller.get_available_dbs(connection, conn_info["tcp"]["user"])
+
+    if type_of_db == "mysql":
+        connection: mysql.connector.MySQLConnection = mysql.connector.connect(**tcp_info)
+        return mysql_controller.get_available_dbs(connection, conn_info["tcp"]["user"])
+
+    return []  # Return an empty list if the database type is not recognized
 
 
 async def new_connection_or_reconnect_to_schema() -> None:
@@ -176,7 +187,12 @@ async def ask_and_store_connection_details(connection_type: str) -> None:
 
     conn_info["type"] = connection_type
 
-    can_establish_connection = db_controller.try_establish_connection(conn_info)
+    can_establish_connection: bool = False
+
+    if conn_info["tcp"].get("type_of_db") == "postgres":
+        can_establish_connection = pg_controller.try_establish_connection(conn_info)
+    elif conn_info["tcp"].get("type_of_db") == "mysql":
+        can_establish_connection = mysql_controller.try_establish_connection(conn_info)
 
     if not can_establish_connection:
         await cl.Message(content="Failed to establish a connection with the provided information. Please try again.").send()
@@ -288,12 +304,24 @@ async def ask_for_the_tcp_connection_info() -> dict:
     ).send()
 
     port = await cl.AskUserMessage(
-        content="Please enter the database port (e.g., `5432`):",
+        content="Please enter the database port (e.g., `5432` or `3306`):",
     ).send()
 
-    dbname = await cl.AskUserMessage(
-        content="Please enter the database name:",
+    type_of_db = await cl.AskActionMessage(
+        content="Please select the type of database you are connecting to:",
+        actions=[
+            cl.Action(name="postgres", payload={"value": "postgres"}, label="PostgreSQL"),
+            cl.Action(name="mysql", payload={"value": "mysql"}, label="MySQL"),
+        ],
     ).send()
+
+    # PostgreSQL has an additional layer of abstraction in a database server. It distinguishes between databases and schemas while MySQL does not.
+    if type_of_db.get("payload").get("value") == "postgres":
+        dbname = await cl.AskUserMessage(
+            content="Please enter the database name:",
+        ).send()
+
+        tcp_info["dbname"] = dbname.get("output")
 
     user = await cl.AskUserMessage(
         content="Please enter the database username:",
@@ -305,8 +333,8 @@ async def ask_for_the_tcp_connection_info() -> dict:
 
     tcp_info["host"] = host.get("output")
     tcp_info["port"] = int(port.get("output"))
-    tcp_info["dbname"] = dbname.get("output")
     tcp_info["user"] = user.get("output")
     tcp_info["password"] = password.get("output")
+    tcp_info["type_of_db"] = type_of_db.get("payload").get("value")
 
     return tcp_info
