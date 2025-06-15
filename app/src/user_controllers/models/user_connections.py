@@ -9,7 +9,7 @@ class UserConnection(SQLModel, table=True):
 
     __tablename__ = "USER_CONNECTIONS"
 
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: str = Field(default_factory=uuid.uuid4, primary_key=True)
     created_at: str = Field(default_factory=datetime.datetime.now, nullable=False)
     user_email: str = Field(default=None, nullable=False, index=True, foreign_key="APP_USERS.email")
     server_name: str = Field(default=None, nullable=False, index=True)
