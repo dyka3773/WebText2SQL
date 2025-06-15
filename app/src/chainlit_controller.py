@@ -3,6 +3,7 @@ import os
 from typing import TYPE_CHECKING
 
 import chainlit as cl
+import chainlit.data as cl_data
 from connection_factory import get_db_controller, get_db_controller_type
 from sqlmodel import Session, create_engine
 from user_controllers import user_connections
@@ -192,6 +193,10 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
     # Save the connection info in the user session
     cl.user_session.set("curr_conn_info", conn_info)
 
+    # Change the current thread name to reflect the current connection
+    server_name = conn_info["tcp"].get("host", "unknown_server")
+    await change_thread_name(server_name)
+
     # Save the connection info in the database
     db_engine = create_engine(os.getenv("DATABASE_URL"))
 
@@ -199,7 +204,7 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
         user_connections.insert_user_connection(
             user_connection=UserConnection(
                 user_email=cl.user_session.get("user").identifier,
-                server_name=conn_info["tcp"].get("host", "unknown_server"),
+                server_name=server_name,
                 ssh_connection_info=conn_info["ssh"] if connection_type == "ssh" else {},
                 tcp_connection_info=conn_info["tcp"] if connection_type == "tcp" else {},
                 type_of_db=conn_info["type_of_db"],
@@ -243,6 +248,9 @@ async def handle_schema_selection() -> None:
     if schema_to_work_with:
         # Step 3: Set the selected schema as a context variable for this user
         cl.user_session.set("curr_db_schema", schema_to_work_with)
+
+        # Change the current thread name to reflect the current schema
+        await append_schema_to_thread_name(schema_to_work_with)
 
         # Step 4: Send a message to the user confirming the selection
         await cl.Message(
@@ -333,3 +341,43 @@ async def ask_for_the_tcp_connection_info() -> dict:
     type_of_db = type_of_db.get("payload").get("value")
 
     return tcp_info, type_of_db
+
+
+async def change_thread_name(thread_name: str) -> None:
+    """
+    Change the name of the current thread to reflect the current connection.
+
+    Args:
+        thread_name (str): The new name for the thread.
+    """
+    logger.info(f"Changing thread name to: {thread_name}")
+
+    # TODO @dyka3773: This is a temporary solution to change the thread name (it is visible only when refreshing the page).
+    await cl_data.get_data_layer().update_thread(
+        cl.context.session.thread_id,
+        name=thread_name,
+    )
+    # This is a hacky way to set the thread name in Chainlit.
+    # It uses the emitter to emit that a new interaction has started again after the thread name has already been set.
+    # BUG: It doesn't seem to work properly, so it is commented out for now.
+    # await cl.context.emitter.emit(
+    #     "first_interaction",
+    #     {
+    #         "interaction": thread_name,
+    #         "thread_id": cl.context.session.thread_id,
+    #     },
+    # )
+
+
+async def append_schema_to_thread_name(schema_name: str) -> None:
+    """
+    Append the schema name to the current thread name.
+
+    Args:
+        schema_name (str): The name of the schema to append.
+    """
+    current_thread = await cl_data.get_data_layer().get_thread(cl.context.session.thread_id)
+    current_thread_name = current_thread.get("name")
+
+    new_thread_name = f"{current_thread_name} - {schema_name}"
+    await change_thread_name(new_thread_name)
