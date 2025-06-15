@@ -33,3 +33,30 @@ def insert_user_connection(user_connection: UserConnection, session: Session) ->
     session.add(user_connection)
     session.commit()
     return user_connection  # This user_connection doesn't have an ID yet, but we don't need it
+
+
+def delete_user_connection_by_server_name(server_name: str, user_email: str, session: Session) -> UserConnection:
+    """
+    Delete a user connection by its server name and user email.
+
+    Args:
+        server_name (str): The name of the server to delete the connection for.
+        user_email (str): The email of the user whose connection is to be deleted.
+        session (Session): The SQLAlchemy session to use for the deletion.
+
+    Returns:
+        UserConnection: The deleted UserConnection instance, or None if no connection was found.
+    """
+    user_connection: UserConnection = session.exec(
+        select(UserConnection).where(
+            UserConnection.server_name == server_name,
+            UserConnection.user_email == user_email,
+        ),
+    ).one()
+
+    if user_connection:
+        session.delete(user_connection)
+
+    session.commit()
+
+    return user_connection

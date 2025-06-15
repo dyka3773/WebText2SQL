@@ -110,7 +110,7 @@ async def new_thread_opened() -> None:
         thread: The thread object representing the chat session.
     """
     logger.debug(f"Chat started by User: {cl.user_session.get('user').identifier}")
-    await chainlit_controller.new_connection_or_reconnect_to_schema()
+    await chainlit_controller.new_connection_reconnect_or_delete_connection()
 
 
 @cl.on_message
