@@ -179,14 +179,15 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
         return False
 
     conn_info: dict = {}
+    connection_name: str = ""
 
     if connection_type == "ssh":
         # Ask for SSH and TCP connection details
         # Note: The SSH connection info will be used to create a tunnel to the database server
         conn_info["ssh"] = await ask_for_the_ssh_connection_info()
-        conn_info["tcp"], conn_info["type_of_db"] = await ask_for_the_tcp_connection_info()
+        conn_info["tcp"], conn_info["type_of_db"], connection_name = await ask_for_the_tcp_connection_info()
     elif connection_type == "tcp":
-        conn_info["tcp"], conn_info["type_of_db"] = await ask_for_the_tcp_connection_info()
+        conn_info["tcp"], conn_info["type_of_db"], connection_name = await ask_for_the_tcp_connection_info()
 
     conn_info["type"] = connection_type
 
@@ -201,7 +202,7 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
     cl.user_session.set("curr_conn_info", conn_info)
 
     # Change the current thread name to reflect the current connection
-    server_name = conn_info["tcp"].get("host", "unknown_server")
+    server_name = connection_name if connection_name else conn_info["tcp"].get("host", "unknown_server")
     db_user = conn_info["tcp"].get("user", "unknown_user")
 
     thread_name = f"{server_name} - {db_user}"
@@ -303,12 +304,14 @@ async def ask_for_the_ssh_connection_info() -> dict:
     return ssh_info
 
 
-async def ask_for_the_tcp_connection_info() -> dict:
+async def ask_for_the_tcp_connection_info() -> tuple[dict, str, str]:
     """
     Ask the user for TCP connection details and return them as a dictionary.
 
     Returns:
         dict: A dictionary containing the TCP connection details.
+        str: The type of database (e.g., "postgres" or "mysql").
+        str: The name of the connection.
     """
     tcp_info: dict = {}
 
@@ -344,13 +347,18 @@ async def ask_for_the_tcp_connection_info() -> dict:
         content="Please enter the database password:",
     ).send()
 
+    connection_name: StepDict | None = await cl.AskUserMessage(
+        content="Please enter a name for this connection (e.g., `my_db_connection`):",
+    ).send()
+
     tcp_info["host"] = host.get("output")
     tcp_info["port"] = int(port.get("output"))
     tcp_info["user"] = user.get("output")
     tcp_info["password"] = password.get("output")
+    connection_name = connection_name.get("output")
     type_of_db = type_of_db.get("payload").get("value")
 
-    return tcp_info, type_of_db
+    return tcp_info, type_of_db, connection_name
 
 
 async def change_thread_name(thread_name: str) -> None:
