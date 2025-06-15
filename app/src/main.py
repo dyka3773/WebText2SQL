@@ -5,7 +5,6 @@ from typing import Annotated, Any
 import custom_logging
 from auth import hash_password, verify_password
 from chainlit.utils import mount_chainlit
-from controllers import app_users
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Form, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer
 from sqlmodel import Session, create_engine
 from starlette.templating import _TemplateResponse
+from user_controllers import app_users
 
 load_dotenv()
 
@@ -85,6 +85,8 @@ def login(
     response = RedirectResponse(url="/chainlit", status_code=302)
     response.set_cookie(COOKIE_NAME, token, httponly=True)
 
+    logger.info(f"User logged in successfully: {email}")
+
     return response
 
 
@@ -125,6 +127,8 @@ def register(
     token = serializer.dumps(email)
     response = RedirectResponse(url="/chainlit", status_code=302)
     response.set_cookie(COOKIE_NAME, token, httponly=True)
+
+    logger.info(f"User registered successfully: {email}")
 
     return response
 

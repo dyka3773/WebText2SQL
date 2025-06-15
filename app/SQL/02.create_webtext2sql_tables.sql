@@ -18,6 +18,7 @@ CREATE TABLE "USER_CONNECTIONS" (
     "server_name" TEXT NOT NULL,
     "ssh_connection_info" JSONB,
     "tcp_connection_info" JSONB,  -- I know this is not normalized properly, but using a whole different table for this would be an overkill
+    "type_of_db" TEXT NOT NULL,  -- Added to store the type of database (e.g., 'mysql', 'postgres')
 
     CONSTRAINT "USER_CONNECTIONS_PK" PRIMARY KEY ("id")
 );

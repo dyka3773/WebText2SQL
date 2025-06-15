@@ -2,7 +2,6 @@ import os
 
 import chainlit as cl
 import custom_logging
-import psycopg as sql
 from chainlit.types import ThreadDict
 from dotenv import load_dotenv
 from fastapi import Request, Response
@@ -12,12 +11,17 @@ from sqlmodel import Session, create_engine
 logger = custom_logging.setup_logger("webtext2sql")
 custom_logging.setup_logger("chainlit")
 
+from typing import TYPE_CHECKING
+
 import ai_controller
 import chainlit_controller
-import db_controller
 import str_manipulation
-from controllers import app_users
+from connection_factory import get_db_controller
 from main import COOKIE_NAME, serializer
+from user_controllers import app_users
+
+if TYPE_CHECKING:
+    from db_controllers.base_db_controller import BaseDBController
 
 load_dotenv()
 
@@ -122,13 +126,21 @@ async def handle_message(message: cl.Message) -> None:
 
     # Step 1: Find Metadata from db according to the user
     conn_info = chainlit_controller.get_user_connection_info()
-
-    connection: sql.Connection = sql.connect(**conn_info)  # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
+    # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
 
     schema = cl.user_session.get("curr_db_schema")
 
     logger.debug("Fetching metadata from the database")
-    metadata: list[str] = db_controller.get_db_metadata(connection, schema, conn_info["user"])
+
+    db_controller: BaseDBController = get_db_controller(
+        db_type=conn_info["type_of_db"],
+        tcp_details=conn_info["tcp"],
+    )
+
+    metadata: list[str] = db_controller.get_db_metadata(
+        schema=schema,
+    )
+
     meta_str = "\n".join(metadata)
 
     template = f"""This is my db structure:
@@ -137,7 +149,7 @@ async def handle_message(message: cl.Message) -> None:
     Please answer only with the SQL query (without any text formatting) that answers the following question:
     {message.content}
 
-    Keep in mind that the database is a PostgreSQL database and that the schema is {schema} and it should be used in the SQL query.
+    Keep in mind that the database is a {conn_info["type_of_db"]} database and that the schema is {schema} and it should be used in the SQL query.
     Unless explicitly stated, please limit the number of rows returned to 30.
     """
     # Step 2: Send user's query to AI & get the response from AI in the form of an SQL query
@@ -153,8 +165,11 @@ async def handle_message(message: cl.Message) -> None:
         await cl.Message(content="The AI model did not return a valid SQL query.").send()
         return
 
+    results: tuple[tuple] = ()
+    col_names: tuple[str] = ()
+
     # Step 3: Execute the SQL query against the database
-    results, col_names = db_controller.fetch_data(sql_query, connection)
+    results, col_names = db_controller.execute_query(sql_query)
 
     # Step 4: Format the data into a user-friendly format before and sending it back to the user
     answer = str_manipulation.form_answer(results, col_names, sql_query)

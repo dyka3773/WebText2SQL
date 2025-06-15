@@ -91,6 +91,7 @@ lint.ignore = [
     "S608",    # Flake8-bandit - Possible SQL injection in f-string
     "TD003",   # Flake8-todos - Missing issue link in TODO comment
     "FIX002",  # Flake8-fixme - Line contains TODO, consider resolving the issue
+    "TD004",   # Flake8-todos - Missing colon in TODO comment
 ]
 
 [format]
