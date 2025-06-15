@@ -1,12 +1,13 @@
 import os
 
 import chainlit as cl
-import custom_logging
 from chainlit.types import ThreadDict
 from dotenv import load_dotenv
 from fastapi import Request, Response
 from itsdangerous import BadSignature, SignatureExpired
 from sqlmodel import Session, create_engine
+
+import custom_logging
 
 logger = custom_logging.setup_logger("webtext2sql")
 custom_logging.setup_logger("chainlit")
@@ -110,7 +111,7 @@ async def new_thread_opened() -> None:
         thread: The thread object representing the chat session.
     """
     logger.debug(f"Chat started by User: {cl.user_session.get('user').identifier}")
-    await chainlit_controller.new_connection_or_reconnect_to_schema()
+    await chainlit_controller.new_connection_reconnect_or_delete_connection()
 
 
 @cl.on_message
@@ -175,4 +176,5 @@ async def handle_message(message: cl.Message) -> None:
     answer = str_manipulation.form_answer(results, col_names, sql_query)
 
     # Step 5: Send the response back to the user
+    await cl.Message(content=answer).send()
     await cl.Message(content=answer).send()

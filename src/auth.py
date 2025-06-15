@@ -1,7 +1,5 @@
 import logging
 
-import chainlit as cl
-import psycopg as sql
 from passlib.context import CryptContext
 
 logger = logging.getLogger("webtext2sql")

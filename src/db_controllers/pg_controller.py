@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, override
 
 import psycopg as sql
 from cachetools.func import ttl_cache
+
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 from db_controllers.base_db_controller import BaseDBController
 

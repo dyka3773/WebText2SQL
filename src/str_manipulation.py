@@ -2,6 +2,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from cachetools.func import ttl_cache
+
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 
 if TYPE_CHECKING:
@@ -130,4 +131,5 @@ def _create_markdown_results_table(results: tuple[tuple], column_names: tuple[st
     rows = ["| " + " | ".join([str(item) for item in row]) + " |" for row in results]
 
     # Combine header, separator, and rows
+    return "\n".join([header, separator, *rows])
     return "\n".join([header, separator, *rows])

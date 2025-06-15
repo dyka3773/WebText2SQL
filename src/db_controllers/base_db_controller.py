@@ -3,11 +3,12 @@ from abc import ABC, abstractmethod
 
 import mysql.connector
 import psycopg
-import str_manipulation
 from cachetools.func import ttl_cache
-from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 from mysql.connector.types import RowType
 from psycopg.rows import Row
+
+import str_manipulation
+from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 
 logger = logging.getLogger("webtext2sql")
 
@@ -176,4 +177,5 @@ class BaseDBController(ABC):
     def __del__(self) -> None:
         """Destructor to ensure the database connection is closed when the object is deleted."""
         self.close_connection()
+        logger.debug("BaseDBController instance deleted and connection closed.")
         logger.debug("BaseDBController instance deleted and connection closed.")

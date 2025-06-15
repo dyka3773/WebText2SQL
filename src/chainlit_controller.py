@@ -4,8 +4,10 @@ from typing import TYPE_CHECKING
 
 import chainlit as cl
 import chainlit.data as cl_data
-from connection_factory import get_db_controller, get_db_controller_type
 from sqlmodel import Session, create_engine
+
+import connection_controller
+from connection_factory import get_db_controller
 from user_controllers import user_connections
 from user_controllers.user_connections import UserConnection
 
@@ -43,11 +45,17 @@ def get_available_schemas_for_curr_server() -> list[str]:
         logger.error("No connection info found for the user.")
         return []
 
-    return get_db_controller(conn_info["type_of_db"], conn_info["tcp"]).get_available_dbs()
+    return connection_controller.wrap_db_func_with_ssh_if_needed(
+        db_func=get_db_controller(
+            db_type=conn_info["type_of_db"],
+            tcp_details=conn_info["tcp"],
+        ).get_available_dbs,  # This is the function reference, not the result of the function call
+        conn_info=conn_info.get("ssh"),
+    )()
 
 
-async def new_connection_or_reconnect_to_schema() -> None:
-    """Create a new database connection or reconnect to a previously connected schema."""
+async def new_connection_reconnect_or_delete_connection() -> None:
+    """Create a new database connection, reconnect to a previously connected one, or delete an existing connection."""
     choice_btns: list[cl.Action] = [
         cl.Action(
             name="new_connection",
@@ -58,6 +66,11 @@ async def new_connection_or_reconnect_to_schema() -> None:
             name="reconnect",
             payload={"value": "reconnect"},
             label="Reconnect to a previously connected schema",
+        ),
+        cl.Action(
+            name="delete_connection",
+            payload={"value": "delete_connection"},
+            label="Delete an existing connection",
         ),
     ]
     res: AskActionResponse | None = None
@@ -73,40 +86,57 @@ async def new_connection_or_reconnect_to_schema() -> None:
         await handle_new_connection()
     elif action == "reconnect":
         await handle_db_selection()
+    elif action == "delete_connection":
+        await handle_delete_connection()
+
+
+async def handle_delete_connection() -> None:
+    """Handle the deletion of a previously connected database."""
+    db_btns = await _get_db_buttons_of_user_connections()
+
+    if not db_btns:
+        await cl.Message(
+            content="You have no previously connected databases to delete. Please connect to a new database.",
+        ).send()
+        await handle_new_connection()
+        return
+
+    # Step 1: Send a blocking message to the user with the list of available databases
+    res: AskActionResponse | None = None
+    while not res:  # This is needed because sometimes the response is time-ing out and we get None
+        res = await cl.AskActionMessage(
+            content="Please choose a previously connected database to delete:",
+            actions=db_btns,
+        ).send()
+
+    # Step 2: Get the selected database connection ID from the action payload
+    selected_conn: str = res.get("payload").get("value")
+    if selected_conn:
+        # Step 3: Delete the selected connection from the database
+        db_engine = create_engine(os.getenv("DATABASE_URL"))
+        with Session(db_engine) as session:
+            user_connections.delete_user_connection_by_server_name(
+                session=session,
+                user_email=cl.user_session.get("user").identifier,
+                server_name=selected_conn.get("server_name"),
+            )
+
+        await cl.Message(content="Connection deleted successfully!").send()
+
+    # Step 4: Ask the user if they want to reconnect or create a new connection
+    await new_connection_reconnect_or_delete_connection()
 
 
 async def handle_db_selection() -> None:
     """Present the user with a list of previously connected databases and allow them to select one."""
-    db_engine = create_engine(os.getenv("DATABASE_URL"))
-    with Session(db_engine) as session:
-        user_connections_list: list[UserConnection] = user_connections.get_user_connections_by_email(
-            email=cl.user_session.get("user").identifier,
-            session=session,
-        )
-        if not user_connections_list:
-            await cl.Message(
-                content="You have no previously connected databases. Please connect to a new database.",
-            ).send()
-            await handle_new_connection()
-            return
+    db_btns = await _get_db_buttons_of_user_connections()
 
-    # Create action buttons for each previously connected database
-    db_btns: list[cl.Action] = [
-        cl.Action(
-            name=f"{conn.server_name} Queries",
-            payload={
-                "value": {
-                    "type": "ssh" if conn.ssh_connection_info else "tcp",
-                    "ssh": conn.ssh_connection_info,
-                    "tcp": conn.tcp_connection_info,
-                    "type_of_db": conn.type_of_db,
-                    "server_name": conn.server_name,
-                }
-            },
-            label=f"{conn.server_name}",
-        )
-        for conn in user_connections_list
-    ]
+    if not db_btns:
+        await cl.Message(
+            content="You have no previously connected databases. Please connect to a new database.",
+        ).send()
+        await handle_new_connection()
+        return
 
     # Step 1: Send a blocking message to the user with the list of available databases
     res: AskActionResponse | None = None
@@ -129,6 +159,36 @@ async def handle_db_selection() -> None:
         await change_thread_name(thread_name)
 
         await handle_schema_selection()
+
+
+async def _get_db_buttons_of_user_connections() -> list[cl.Action]:
+    db_engine = create_engine(os.getenv("DATABASE_URL"))
+
+    with Session(db_engine) as session:
+        user_connections_list: list[UserConnection] = user_connections.get_user_connections_by_email(
+            email=cl.user_session.get("user").identifier,
+            session=session,
+        )
+
+    # Create action buttons for each previously connected database
+    db_btns: list[cl.Action] = [
+        cl.Action(
+            name=f"{conn.server_name}",
+            payload={
+                "value": {
+                    "type": "ssh" if conn.ssh_connection_info else "tcp",
+                    "ssh": conn.ssh_connection_info,
+                    "tcp": conn.tcp_connection_info,
+                    "type_of_db": conn.type_of_db,
+                    "server_name": conn.server_name,
+                }
+            },
+            label=f"{conn.server_name}",
+        )
+        for conn in user_connections_list
+    ]
+
+    return db_btns
 
 
 async def handle_new_connection() -> None:
@@ -191,8 +251,7 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
 
     conn_info["type"] = connection_type
 
-    # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
-    can_establish_connection: bool = get_db_controller_type(conn_info["type_of_db"]).try_establish_connection(conn_info["tcp"])
+    can_establish_connection: bool = connection_controller.try_establish_connection(conn_info)
 
     if not can_establish_connection:
         await cl.Message(content="Failed to establish a connection with the provided information. Please try again.").send()
@@ -386,4 +445,5 @@ async def append_schema_to_thread_name(schema_name: str) -> None:
     current_thread_name = current_thread.get("name")
 
     new_thread_name = f"{current_thread_name} - {schema_name}"
+    await change_thread_name(new_thread_name)
     await change_thread_name(new_thread_name)
