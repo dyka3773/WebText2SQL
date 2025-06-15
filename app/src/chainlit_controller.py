@@ -3,14 +3,13 @@ import os
 from typing import TYPE_CHECKING
 
 import chainlit as cl
-import mysql.connector
-import psycopg
-from controllers import user_connections
-from controllers.user_connections import UserConnection
-from db_controllers import mysql_controller, pg_controller
+from connection_factory import get_db_controller, get_db_controller_type
 from sqlmodel import Session, create_engine
+from user_controllers import user_connections
+from user_controllers.user_connections import UserConnection
 
 if TYPE_CHECKING:
+    from chainlit.step import StepDict
     from chainlit.types import AskActionResponse
 
 logger: logging.Logger = logging.getLogger("webtext2sql")
@@ -43,20 +42,7 @@ def get_available_schemas_for_curr_server() -> list[str]:
         logger.error("No connection info found for the user.")
         return []
 
-    # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
-    tcp_info = conn_info["tcp"].copy()
-    type_of_db = tcp_info.pop("type_of_db")
-
-    if type_of_db == "postgres":
-        connection: psycopg.Connection = psycopg.connect(**tcp_info)
-        # For PostgreSQL, get the list of available schemas
-        return pg_controller.get_available_dbs(connection, conn_info["tcp"]["user"])
-
-    if type_of_db == "mysql":
-        connection: mysql.connector.MySQLConnection = mysql.connector.connect(**tcp_info)
-        return mysql_controller.get_available_dbs(connection, conn_info["tcp"]["user"])
-
-    return []  # Return an empty list if the database type is not recognized
+    return get_db_controller(conn_info["type_of_db"], conn_info["tcp"]).get_available_dbs()
 
 
 async def new_connection_or_reconnect_to_schema() -> None:
@@ -112,6 +98,7 @@ async def handle_db_selection() -> None:
                     "type": "ssh" if conn.ssh_connection_info else "tcp",
                     "ssh": conn.ssh_connection_info,
                     "tcp": conn.tcp_connection_info,
+                    "type_of_db": conn.type_of_db,
                 }
             },
             label=f"{conn.server_name}",
@@ -133,7 +120,6 @@ async def handle_db_selection() -> None:
         # Step 3: Set the selected connection info as a context variable for this user
         cl.user_session.set("curr_conn_info", selected_conn_info)
 
-        # TODO #36 @dyka3773: If we're working with MySQL there are no schemas
         await handle_schema_selection()
 
 
@@ -162,18 +148,27 @@ async def handle_new_connection() -> None:
 
     connection_type = res.get("payload").get("value")
 
-    await ask_and_store_connection_details(connection_type)
-
-    # TODO: check here if the connection was successful and if not, ask the user to try again
+    connection_established: bool = False
+    while not connection_established:
+        # Ask for the connection details and store them
+        connection_established = await ask_and_store_connection_details(connection_type)
 
     await handle_schema_selection()
 
 
-async def ask_and_store_connection_details(connection_type: str) -> None:
-    """Handle the connection to the database by asking for the necessary information and then storing it."""
+async def ask_and_store_connection_details(connection_type: str) -> bool:
+    """
+    Handle the connection to the database by asking for the necessary information and then storing it.
+
+    Args:
+        connection_type (str): The type of connection to establish, either "tcp" or "ssh".
+
+    Returns:
+        bool: True if the connection was established successfully, False otherwise.
+    """
     if connection_type not in ["tcp", "ssh"]:
         await cl.Message(content="Invalid connection type selected. Please try again.").send()
-        return
+        return False
 
     conn_info: dict = {}
 
@@ -181,22 +176,18 @@ async def ask_and_store_connection_details(connection_type: str) -> None:
         # Ask for SSH and TCP connection details
         # Note: The SSH connection info will be used to create a tunnel to the database server
         conn_info["ssh"] = await ask_for_the_ssh_connection_info()
-        conn_info["tcp"] = await ask_for_the_tcp_connection_info()
+        conn_info["tcp"], conn_info["type_of_db"] = await ask_for_the_tcp_connection_info()
     elif connection_type == "tcp":
-        conn_info["tcp"] = await ask_for_the_tcp_connection_info()
+        conn_info["tcp"], conn_info["type_of_db"] = await ask_for_the_tcp_connection_info()
 
     conn_info["type"] = connection_type
 
-    can_establish_connection: bool = False
-
-    if conn_info["tcp"].get("type_of_db") == "postgres":
-        can_establish_connection = pg_controller.try_establish_connection(conn_info)
-    elif conn_info["tcp"].get("type_of_db") == "mysql":
-        can_establish_connection = mysql_controller.try_establish_connection(conn_info)
+    # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
+    can_establish_connection: bool = get_db_controller_type(conn_info["type_of_db"]).try_establish_connection(conn_info["tcp"])
 
     if not can_establish_connection:
         await cl.Message(content="Failed to establish a connection with the provided information. Please try again.").send()
-        return
+        return False
 
     # Save the connection info in the user session
     cl.user_session.set("curr_conn_info", conn_info)
@@ -211,9 +202,13 @@ async def ask_and_store_connection_details(connection_type: str) -> None:
                 server_name=conn_info["tcp"].get("host", "unknown_server"),
                 ssh_connection_info=conn_info["ssh"] if connection_type == "ssh" else {},
                 tcp_connection_info=conn_info["tcp"] if connection_type == "tcp" else {},
+                type_of_db=conn_info["type_of_db"],
             ),
             session=session,
         )
+
+    await cl.Message(content="Connection established successfully!").send()
+    return True
 
 
 async def handle_schema_selection() -> None:
@@ -299,15 +294,15 @@ async def ask_for_the_tcp_connection_info() -> dict:
     """
     tcp_info: dict = {}
 
-    host = await cl.AskUserMessage(
+    host: StepDict | None = await cl.AskUserMessage(
         content="Please enter the database host or IP address (e.g., `db.example.com` or `127.0.0.1`):",
     ).send()
 
-    port = await cl.AskUserMessage(
+    port: StepDict | None = await cl.AskUserMessage(
         content="Please enter the database port (e.g., `5432` or `3306`):",
     ).send()
 
-    type_of_db = await cl.AskActionMessage(
+    type_of_db: AskActionResponse | None = await cl.AskActionMessage(
         content="Please select the type of database you are connecting to:",
         actions=[
             cl.Action(name="postgres", payload={"value": "postgres"}, label="PostgreSQL"),
@@ -323,11 +318,11 @@ async def ask_for_the_tcp_connection_info() -> dict:
 
         tcp_info["dbname"] = dbname.get("output")
 
-    user = await cl.AskUserMessage(
+    user: StepDict | None = await cl.AskUserMessage(
         content="Please enter the database username:",
     ).send()
 
-    password = await cl.AskUserMessage(
+    password: StepDict | None = await cl.AskUserMessage(
         content="Please enter the database password:",
     ).send()
 
@@ -335,6 +330,6 @@ async def ask_for_the_tcp_connection_info() -> dict:
     tcp_info["port"] = int(port.get("output"))
     tcp_info["user"] = user.get("output")
     tcp_info["password"] = password.get("output")
-    tcp_info["type_of_db"] = type_of_db.get("payload").get("value")
+    type_of_db = type_of_db.get("payload").get("value")
 
-    return tcp_info
+    return tcp_info, type_of_db

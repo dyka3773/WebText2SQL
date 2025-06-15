@@ -15,3 +15,4 @@ class UserConnection(SQLModel, table=True):
     server_name: str = Field(default=None, nullable=False, index=True)
     ssh_connection_info: dict = Field(default_factory=dict, sa_column=Column(JSON))
     tcp_connection_info: dict = Field(default_factory=dict, sa_column=Column(JSON))
+    type_of_db: str = Field(default=None, nullable=False, index=True)
