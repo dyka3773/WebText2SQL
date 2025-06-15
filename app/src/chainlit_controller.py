@@ -100,6 +100,7 @@ async def handle_db_selection() -> None:
                     "ssh": conn.ssh_connection_info,
                     "tcp": conn.tcp_connection_info,
                     "type_of_db": conn.type_of_db,
+                    "server_name": conn.server_name,
                 }
             },
             label=f"{conn.server_name}",
@@ -116,10 +117,16 @@ async def handle_db_selection() -> None:
         ).send()
 
     # Step 2: Get the selected database connection info from the action payload
-    selected_conn_info = res.get("payload").get("value")
+    selected_conn_info: dict = res.get("payload").get("value")
     if selected_conn_info:
+        server_name: str = selected_conn_info.pop("server_name")
+
         # Step 3: Set the selected connection info as a context variable for this user
         cl.user_session.set("curr_conn_info", selected_conn_info)
+
+        # Change the current thread name to reflect the current connection
+        thread_name = f"{server_name} - {selected_conn_info['tcp'].get('user', 'unknown_user')}"
+        await change_thread_name(thread_name)
 
         await handle_schema_selection()
 
@@ -195,7 +202,10 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
 
     # Change the current thread name to reflect the current connection
     server_name = conn_info["tcp"].get("host", "unknown_server")
-    await change_thread_name(server_name)
+    db_user = conn_info["tcp"].get("user", "unknown_user")
+
+    thread_name = f"{server_name} - {db_user}"
+    await change_thread_name(thread_name)
 
     # Save the connection info in the database
     db_engine = create_engine(os.getenv("DATABASE_URL"))
@@ -350,23 +360,11 @@ async def change_thread_name(thread_name: str) -> None:
     Args:
         thread_name (str): The new name for the thread.
     """
-    logger.info(f"Changing thread name to: {thread_name}")
+    logger.debug(f"Changing thread name to: {thread_name}")
 
-    # TODO @dyka3773: This is a temporary solution to change the thread name (it is visible only when refreshing the page).
-    await cl_data.get_data_layer().update_thread(
-        cl.context.session.thread_id,
-        name=thread_name,
-    )
     # This is a hacky way to set the thread name in Chainlit.
-    # It uses the emitter to emit that a new interaction has started again after the thread name has already been set.
-    # BUG: It doesn't seem to work properly, so it is commented out for now.
-    # await cl.context.emitter.emit(
-    #     "first_interaction",
-    #     {
-    #         "interaction": thread_name,
-    #         "thread_id": cl.context.session.thread_id,
-    #     },
-    # )
+    # It uses the emitter to emit that the thread name has been initialized.
+    await cl.context.emitter.init_thread(thread_name)
 
 
 async def append_schema_to_thread_name(schema_name: str) -> None:

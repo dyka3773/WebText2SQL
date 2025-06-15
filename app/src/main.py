@@ -29,7 +29,6 @@ app.add_middleware(
 )
 
 logger = custom_logging.setup_logger("fastapi")
-custom_logging.setup_logger("uvicorn")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 COOKIE_NAME = os.getenv("COOKIE_NAME")
