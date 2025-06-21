@@ -135,4 +135,3 @@ class MySQLController(BaseDBController):
         except sql.Error:
             logger.exception("Failed to establish a connection.")
             return False
-            return False

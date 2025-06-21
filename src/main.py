@@ -146,4 +146,3 @@ def favicon(_: Request) -> RedirectResponse:
 
 
 mount_chainlit(app=app, target="chainlit_app.py", path="/chainlit")
-mount_chainlit(app=app, target="chainlit_app.py", path="/chainlit")

@@ -177,4 +177,3 @@ async def handle_message(message: cl.Message) -> None:
 
     # Step 5: Send the response back to the user
     await cl.Message(content=answer).send()
-    await cl.Message(content=answer).send()

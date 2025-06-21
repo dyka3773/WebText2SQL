@@ -132,4 +132,3 @@ def _create_markdown_results_table(results: tuple[tuple], column_names: tuple[st
 
     # Combine header, separator, and rows
     return "\n".join([header, separator, *rows])
-    return "\n".join([header, separator, *rows])

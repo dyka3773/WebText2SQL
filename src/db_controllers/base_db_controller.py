@@ -178,4 +178,3 @@ class BaseDBController(ABC):
         """Destructor to ensure the database connection is closed when the object is deleted."""
         self.close_connection()
         logger.debug("BaseDBController instance deleted and connection closed.")
-        logger.debug("BaseDBController instance deleted and connection closed.")

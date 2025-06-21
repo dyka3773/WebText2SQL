@@ -446,4 +446,3 @@ async def append_schema_to_thread_name(schema_name: str) -> None:
 
     new_thread_name = f"{current_thread_name} - {schema_name}"
     await change_thread_name(new_thread_name)
-    await change_thread_name(new_thread_name)
