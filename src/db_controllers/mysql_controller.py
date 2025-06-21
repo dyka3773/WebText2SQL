@@ -1,13 +1,11 @@
 import logging
-from typing import TYPE_CHECKING, override
+from typing import override
 
-import mysql.connector as sql
+import pymysql as sql
 from cachetools.func import ttl_cache
+
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 from db_controllers.base_db_controller import BaseDBController
-
-if TYPE_CHECKING:
-    from mysql.connector.types import RowType
 
 logger = logging.getLogger("webtext2sql")
 
@@ -21,7 +19,7 @@ class MySQLController(BaseDBController):
     def __init__(self, tcp_details: dict | None = None) -> None:
         super().__init__(db_type="mysql", tcp_details=tcp_details if tcp_details else {})
         if tcp_details is not None:
-            self._connection: sql.MySQLConnection = sql.connect(**tcp_details)
+            self._connection: sql.Connection = sql.connect(**tcp_details)
 
     @override
     @ttl_cache(maxsize=CACHE_MAX_SIZE, ttl=CACHE_TTL)
@@ -40,7 +38,7 @@ class MySQLController(BaseDBController):
                                     FROM information_schema.schemata
                                     WHERE schema_name NOT IN ('information_schema', 'mysql', 'performance_schema', 'sys')
                                     AND schema_name NOT LIKE 'mysql_%';""")
-                dbs: list[RowType] = cursor.fetchall()
+                dbs: list = cursor.fetchall()
 
             if not dbs:
                 logger.error(f"No database schemas found for user: {self._user}")
@@ -76,7 +74,7 @@ class MySQLController(BaseDBController):
                 AND table_name NOT LIKE 'sys_%'
                 AND table_name NOT LIKE 'performance_schema_%';
             """)
-            tables: list[RowType] = cursor.fetchall()
+            tables: list = cursor.fetchall()
 
         if not tables:
             logger.warning(f"No selectable tables found for user: {self._user} in schema: {schema}")
@@ -103,7 +101,7 @@ class MySQLController(BaseDBController):
         try:
             with self.connection.cursor() as cursor:
                 cursor.execute(f"""SHOW CREATE TABLE `{schema}`.`{table_name}`;""")
-                result: RowType = cursor.fetchone()
+                result = cursor.fetchone()
 
         except sql.Error:
             logger.exception(f"An error occurred while fetching DDL for table: {table_name}")
@@ -128,8 +126,10 @@ class MySQLController(BaseDBController):
             bool: True if the connection was successful, False otherwise.
         """
         try:
-            with sql.connect(**tcp_details) as _:
-                logger.debug("Connection established successfully.")
+            logger.debug(f"Attempting to establish connection with info: {tcp_details}")
+
+            with sql.connect(**tcp_details):
+                logger.info("Connection established successfully.")
                 return True
         except sql.Error:
             logger.exception("Failed to establish a connection.")

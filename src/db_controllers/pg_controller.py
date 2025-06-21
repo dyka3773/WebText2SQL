@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, override
 
 import psycopg as sql
 from cachetools.func import ttl_cache
+
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 from db_controllers.base_db_controller import BaseDBController
 
@@ -211,8 +212,10 @@ class PostgresController(BaseDBController):
             bool: True if the connection was successful, False otherwise.
         """
         try:
-            with sql.connect(**tcp_details) as _:
-                logger.debug("Connection established successfully.")
+            logger.debug(f"Attempting to establish connection with info: {tcp_details}")
+
+            with sql.connect(**tcp_details):
+                logger.info("Connection established successfully.")
                 return True
         except sql.Error:
             logger.exception("Failed to establish a connection.")

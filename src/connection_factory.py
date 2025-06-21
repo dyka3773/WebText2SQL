@@ -3,7 +3,7 @@ from db_controllers.mysql_controller import MySQLController
 from db_controllers.pg_controller import PostgresController
 
 
-def get_db_controller(db_type: str, tcp_details: dict | None = None) -> BaseDBController:
+def get_db_controller(db_type: str, tcp_details: dict | None = None) -> MySQLController | PostgresController:
     """
     Get the appropriate database controller based on the specified type.
 
@@ -12,7 +12,7 @@ def get_db_controller(db_type: str, tcp_details: dict | None = None) -> BaseDBCo
         tcp_details (dict): Additional keyword arguments for connection parameters.
 
     Returns:
-        BaseDBController: An instance of the appropriate database controller.
+        MySQLController | PostgresController: An instance of the appropriate database controller.
     """
     if db_type == "mysql":
         return MySQLController(tcp_details)

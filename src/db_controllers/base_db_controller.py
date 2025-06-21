@@ -1,13 +1,14 @@
 import logging
 from abc import ABC, abstractmethod
+from typing import Any
 
-import mysql.connector
 import psycopg
-import str_manipulation
+import pymysql
 from cachetools.func import ttl_cache
+from psycopg.rows import Row  # For type hinting compatibility
+
+import str_manipulation
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
-from mysql.connector.types import RowType
-from psycopg.rows import Row
 
 logger = logging.getLogger("webtext2sql")
 
@@ -18,7 +19,7 @@ class BaseDBController(ABC):
     Provides common functionality for managing database connections and executing queries.
     """
 
-    _connection: psycopg.Connection | mysql.connector.MySQLConnection
+    _connection: psycopg.Connection | pymysql.Connection
 
     def __init__(self, db_type: str, tcp_details: dict) -> None:
         self.db_type = db_type
@@ -26,13 +27,13 @@ class BaseDBController(ABC):
         self._user = tcp_details.get("user")
 
     @property
-    def connection(self) -> psycopg.Connection | mysql.connector.MySQLConnection:
+    def connection(self) -> psycopg.Connection | pymysql.Connection:
         """
         Property to get the current database connection.
         If the connection is not established, it raises an error.
 
         Returns:
-            psycopg.Connection | mysql.connector.MySQLConnection: The current database connection.
+            psycopg.Connection | pymysql.Connection: The current database connection.
 
         Raises:
             ValueError: If the database connection is not established.
@@ -54,7 +55,7 @@ class BaseDBController(ABC):
         raise NotImplementedError(msg)
 
     @ttl_cache(maxsize=1024, ttl=10)
-    def execute_query(self, query: str) -> tuple[tuple[Row | RowType], tuple[str]]:
+    def execute_query(self, query: str) -> tuple[tuple[Row | Any], tuple[str]]:
         """
         Execute a SQL query and return the results.
 
@@ -174,6 +175,9 @@ class BaseDBController(ABC):
             logger.debug("No database connection to close.")
 
     def __del__(self) -> None:
+        """Destructor to ensure the database connection is closed when the object is deleted."""
+        self.close_connection()
+        logger.debug("BaseDBController instance deleted and connection closed.")
         """Destructor to ensure the database connection is closed when the object is deleted."""
         self.close_connection()
         logger.debug("BaseDBController instance deleted and connection closed.")

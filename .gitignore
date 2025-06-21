@@ -128,7 +128,7 @@ celerybeat.pid
 *.sage.py
 
 # Environments
-.env
+# .env
 .venv
 env/
 venv/
@@ -189,7 +189,7 @@ cython_debug/
 # chainlit.md
 
 # Env vars
-*.env
+non-commited.env
 
 # Where we store PostgreSQL data.
 .data

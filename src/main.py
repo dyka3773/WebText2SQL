@@ -2,8 +2,6 @@ import os
 from collections.abc import Generator
 from typing import Annotated, Any
 
-import custom_logging
-from auth import hash_password, verify_password
 from chainlit.utils import mount_chainlit
 from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, Form, Request, Response
@@ -14,6 +12,9 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import URLSafeTimedSerializer
 from sqlmodel import Session, create_engine
 from starlette.templating import _TemplateResponse
+
+import custom_logging
+from auth import hash_password, verify_password
 from user_controllers import app_users
 
 load_dotenv()

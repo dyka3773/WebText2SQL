@@ -1,11 +1,15 @@
 import logging
 import os
+from copy import deepcopy
 from typing import TYPE_CHECKING
 
 import chainlit as cl
 import chainlit.data as cl_data
-from connection_factory import get_db_controller, get_db_controller_type
 from sqlmodel import Session, create_engine
+from sshtunnel import SSHTunnelForwarder
+
+import connection_controller
+from connection_factory import get_db_controller
 from user_controllers import user_connections
 from user_controllers.user_connections import UserConnection
 
@@ -43,7 +47,36 @@ def get_available_schemas_for_curr_server() -> list[str]:
         logger.error("No connection info found for the user.")
         return []
 
-    return get_db_controller(conn_info["type_of_db"], conn_info["tcp"]).get_available_dbs()
+    available_dbs = []
+
+    conn_details = deepcopy(conn_info)
+
+    if conn_info.get("type") == "ssh":
+        tunnel = SSHTunnelForwarder(
+            ssh_address_or_host=(conn_info["ssh"]["ssh_host"], conn_info["ssh"]["ssh_port"]),
+            ssh_username=conn_info["ssh"]["ssh_user"],
+            ssh_password=conn_info["ssh"]["ssh_password"],
+            remote_bind_address=(conn_info["tcp"]["host"], conn_info["tcp"]["port"]),
+            local_bind_address=("127.0.0.1", 0),  # Let OS pick a free local port
+            logger=logger,
+        )
+        tunnel.start()
+
+        conn_details["tcp"]["host"] = "127.0.0.1"
+        conn_details["tcp"]["port"] = tunnel.local_bind_port
+
+    # Get the database controller for the current connection type
+    db_controller = get_db_controller(
+        db_type=conn_info["type_of_db"],
+        tcp_details=conn_details["tcp"],
+    )
+    # Get the available schemas from the database controller
+    available_dbs = db_controller.get_available_dbs()
+
+    if conn_info.get("type") == "ssh":
+        tunnel.stop()
+
+    return available_dbs
 
 
 async def new_connection_reconnect_or_delete_connection() -> None:
@@ -231,6 +264,8 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
         return False
 
     conn_info: dict = {}
+    conn_info["type"] = connection_type
+
     connection_name: str = ""
 
     if connection_type == "ssh":
@@ -241,10 +276,7 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
     elif connection_type == "tcp":
         conn_info["tcp"], conn_info["type_of_db"], connection_name = await ask_for_the_tcp_connection_info()
 
-    conn_info["type"] = connection_type
-
-    # TODO #34 @dyka3773: Change this to support SSH tunnel connections if needed
-    can_establish_connection: bool = get_db_controller_type(conn_info["type_of_db"]).try_establish_connection(conn_info["tcp"])
+    can_establish_connection: bool = connection_controller.try_establish_connection(conn_info)
 
     if not can_establish_connection:
         await cl.Message(content="Failed to establish a connection with the provided information. Please try again.").send()
@@ -254,8 +286,8 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
     cl.user_session.set("curr_conn_info", conn_info)
 
     # Change the current thread name to reflect the current connection
-    server_name = connection_name if connection_name else conn_info["tcp"].get("host", "unknown_server")
-    db_user = conn_info["tcp"].get("user", "unknown_user")
+    server_name = connection_name if connection_name else conn_info["tcp"].get("host")
+    db_user = conn_info["tcp"].get("user")
 
     thread_name = f"{server_name} - {db_user}"
     await change_thread_name(thread_name)
@@ -269,7 +301,7 @@ async def ask_and_store_connection_details(connection_type: str) -> bool:
                 user_email=cl.user_session.get("user").identifier,
                 server_name=server_name,
                 ssh_connection_info=conn_info["ssh"] if connection_type == "ssh" else {},
-                tcp_connection_info=conn_info["tcp"] if connection_type == "tcp" else {},
+                tcp_connection_info=conn_info["tcp"],
                 type_of_db=conn_info["type_of_db"],
             ),
             session=session,
