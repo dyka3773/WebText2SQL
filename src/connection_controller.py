@@ -1,8 +1,14 @@
 import logging
+from copy import deepcopy
+from typing import TYPE_CHECKING
 
 from sshtunnel import SSHTunnelForwarder
 
 from connection_factory import get_db_controller
+
+if TYPE_CHECKING:
+    from db_controllers.mysql_controller import MySQLController
+    from db_controllers.pg_controller import PostgresController
 
 logger: logging.Logger = logging.getLogger("webtext2sql")
 
@@ -17,38 +23,35 @@ def try_establish_connection(conn_info: dict) -> bool:
     Returns:
         bool: True if the connection is established successfully, False otherwise.
     """
-    logger.debug(f"Attempting to establish connection with info: {conn_info}")
-    return wrap_db_func_with_ssh_if_needed(
-        get_db_controller(conn_info["type_of_db"]).try_establish_connection,
-        conn_info,
-        conn_info["tcp"],
-    )()
+    db_controller_type: MySQLController | PostgresController = get_db_controller(
+        db_type=conn_info["type_of_db"],
+    )
 
+    if conn_info["type"] == "ssh":
+        # If SSH connection is selected, we need to establish the SSH tunnel first
+        try:
+            with SSHTunnelForwarder(
+                ssh_address_or_host=(conn_info["ssh"]["ssh_host"], conn_info["ssh"]["ssh_port"]),
+                ssh_username=conn_info["ssh"]["ssh_user"],
+                ssh_password=conn_info["ssh"]["ssh_password"],
+                remote_bind_address=(conn_info["tcp"]["host"], conn_info["tcp"]["port"]),
+                local_bind_address=("127.0.0.1", 0),  # Let OS pick a free local port
+                logger=logger,
+            ) as tunnel:
+                # Update the TCP connection info to use the local bind port
+                conn_dict_info = deepcopy(conn_info)
 
-def wrap_db_func_with_ssh_if_needed(db_func: callable, conn_info: dict, *args: tuple, **kwargs: dict) -> callable:
-    """
-    Compose a database function with SSH tunneling if needed.
+                conn_dict_info["tcp"]["host"] = "127.0.0.1"
+                conn_dict_info["tcp"]["port"] = tunnel.local_bind_port
 
-    Args:
-        db_func (callable): The database function to be executed.
-        conn_info (dict): A dictionary containing the connection information.
-        *args: Positional arguments for the database function.
-        **kwargs: Keyword arguments for the database function.
+                return db_controller_type.try_establish_connection(
+                    tcp_details=conn_dict_info["tcp"],
+                )
 
-    Returns:
-        callable: A function that executes the database function with SSH tunneling if needed.
-    """
-    ssh_info = conn_info.get("ssh")
-    tcp_info = conn_info.get("tcp")
-    if ssh_info is not None:
-        # If SSH info is provided, we assume the connection is established via SSH tunnel
-        with SSHTunnelForwarder(
-            ssh_address_or_host=ssh_info["ssh_host"],
-            ssh_username=ssh_info["ssh_user"],
-            ssh_password=ssh_info["ssh_password"],
-            remote_bind_address=(tcp_info["host"], tcp_info["port"]),
-        ):
-            return lambda: db_func(*args, **kwargs)
-    # If no SSH info is provided, we connect directly to the database
-    return lambda: db_func(*args, **kwargs)
-    return lambda: db_func(*args, **kwargs)
+        except Exception:
+            logger.exception("Failed to establish SSH tunnel:")
+            return False
+
+    return db_controller_type.try_establish_connection(
+        tcp_details=conn_info["tcp"],
+    )
