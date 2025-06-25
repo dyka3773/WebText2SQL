@@ -101,12 +101,11 @@ async def new_connection_reconnect_or_delete_connection() -> None:
             label="Delete an existing connection",
         ),
     ]
-    res: AskActionResponse | None = None
-    while not res:  # This is needed because sometimes the response is time-ing out and we get None
-        res = await cl.AskActionMessage(
-            content="Do you want to connect to a new database or reconnect to a previously connected schema?",
-            actions=choice_btns,
-        ).send()
+    res: AskActionResponse | None = await cl.AskActionMessage(
+        content="Do you want to connect to a new database or reconnect to a previously connected schema?",
+        actions=choice_btns,
+        timeout=31_536_000,
+    ).send()
 
     action = res.get("payload").get("value")
 
@@ -130,12 +129,11 @@ async def handle_delete_connection() -> None:
         return
 
     # Step 1: Send a blocking message to the user with the list of available databases
-    res: AskActionResponse | None = None
-    while not res:  # This is needed because sometimes the response is time-ing out and we get None
-        res = await cl.AskActionMessage(
-            content="Please choose a previously connected database to delete:",
-            actions=db_btns,
-        ).send()
+    res: AskActionResponse | None = await cl.AskActionMessage(
+        content="Please choose a previously connected database to delete:",
+        actions=db_btns,
+        timeout=31_536_000,
+    ).send()
 
     # Step 2: Get the selected database connection ID from the action payload
     selected_conn: str = res.get("payload").get("value")
@@ -167,12 +165,11 @@ async def handle_db_selection() -> None:
         return
 
     # Step 1: Send a blocking message to the user with the list of available databases
-    res: AskActionResponse | None = None
-    while not res:  # This is needed because sometimes the response is time-ing out and we get None
-        res = await cl.AskActionMessage(
-            content="Please choose a previously connected database to work with:",
-            actions=db_btns,
-        ).send()
+    res: AskActionResponse | None = await cl.AskActionMessage(
+        content="Please choose a previously connected database to work with:",
+        actions=db_btns,
+        timeout=31_536_000,
+    ).send()
 
     # Step 2: Get the selected database connection info from the action payload
     selected_conn_info: dict = res.get("payload").get("value")
@@ -235,12 +232,11 @@ async def handle_new_connection() -> None:
         ),
     ]
 
-    res: AskActionResponse | None = None
-    while not res:  # This is needed because sometimes the response is time-ing out and we get None
-        res = await cl.AskActionMessage(
-            content="Do you want to connect to the database using a TCP/IP connection or an SSH tunnel?",
-            actions=connection_type_btns,
-        ).send()
+    res: AskActionResponse | None = await cl.AskActionMessage(
+        content="Do you want to connect to the database using a TCP/IP connection or an SSH tunnel?",
+        actions=connection_type_btns,
+        timeout=31_536_000,
+    ).send()
 
     connection_type = res.get("payload").get("value")
 
@@ -334,12 +330,11 @@ async def handle_schema_selection() -> None:
     ]
 
     # Step 1: Send a blocking message to the user with the list of available schemas
-    res: AskActionResponse | None = None
-    while not res:  # This is needed because sometimes the response is time-ing out and we get None
-        res = await cl.AskActionMessage(
-            content="Please choose a database schema to work with before sending any messages:",
-            actions=schema_btns,
-        ).send()
+    res: AskActionResponse | None = await cl.AskActionMessage(
+        content="Please choose a database schema to work with before sending any messages:",
+        actions=schema_btns,
+        timeout=31_536_000,
+    ).send()
 
     # Step 2: Get the selected schema name from the action payload
     schema_to_work_with = res.get("payload").get("value")
@@ -369,18 +364,22 @@ async def ask_for_the_ssh_connection_info() -> dict:
 
     ssh_host = await cl.AskUserMessage(
         content="Please enter the SSH host (e.g., `ssh.example.com`):",
+        timeout=31_536_000,
     ).send()
 
     ssh_port = await cl.AskUserMessage(
         content="Please enter the SSH port (e.g., `22`):",
+        timeout=31_536_000,
     ).send()
 
     ssh_user = await cl.AskUserMessage(
         content="Please enter the SSH username:",
+        timeout=31_536_000,
     ).send()
 
     ssh_password = await cl.AskUserMessage(
         content="Please enter the SSH password:",
+        timeout=31_536_000,
     ).send()
 
     ssh_info["ssh_host"] = ssh_host.get("output")
@@ -404,10 +403,12 @@ async def ask_for_the_tcp_connection_info() -> tuple[dict, str, str]:
 
     host: StepDict | None = await cl.AskUserMessage(
         content="Please enter the database host or IP address (e.g., `db.example.com` or `127.0.0.1`):",
+        timeout=31_536_000,
     ).send()
 
     port: StepDict | None = await cl.AskUserMessage(
         content="Please enter the database port (e.g., `5432` or `3306`):",
+        timeout=31_536_000,
     ).send()
 
     type_of_db: AskActionResponse | None = await cl.AskActionMessage(
@@ -416,26 +417,31 @@ async def ask_for_the_tcp_connection_info() -> tuple[dict, str, str]:
             cl.Action(name="postgres", payload={"value": "postgres"}, label="PostgreSQL"),
             cl.Action(name="mysql", payload={"value": "mysql"}, label="MySQL"),
         ],
+        timeout=31_536_000,
     ).send()
 
     # PostgreSQL has an additional layer of abstraction in a database server. It distinguishes between databases and schemas while MySQL does not.
     if type_of_db.get("payload").get("value") == "postgres":
         dbname = await cl.AskUserMessage(
             content="Please enter the database name:",
+            timeout=31_536_000,
         ).send()
 
         tcp_info["dbname"] = dbname.get("output")
 
     user: StepDict | None = await cl.AskUserMessage(
         content="Please enter the database username:",
+        timeout=31_536_000,
     ).send()
 
     password: StepDict | None = await cl.AskUserMessage(
         content="Please enter the database password:",
+        timeout=31_536_000,
     ).send()
 
     connection_name: StepDict | None = await cl.AskUserMessage(
         content="Please enter a name for this connection (e.g., `my_db_connection`):",
+        timeout=31_536_000,
     ).send()
 
     tcp_info["host"] = host.get("output")
