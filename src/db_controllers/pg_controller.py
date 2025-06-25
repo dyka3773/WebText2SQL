@@ -153,6 +153,7 @@ class PostgresController(BaseDBController):
                 # Get foreign keys
                 cur.execute(f"""
                     SELECT
+                        tc.constraint_name,
                         kcu.column_name,
                         ccu.table_schema AS foreign_table_schema,
                         ccu.table_name AS foreign_table,
