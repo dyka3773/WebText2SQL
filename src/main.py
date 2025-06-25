@@ -55,9 +55,16 @@ def login_page(request: Request, error: str | None = None) -> _TemplateResponse:
     return templates.TemplateResponse("login.html", {"request": request, "error": error})
 
 
+def _create_session_and_redirect(email: str) -> Response:
+    """Create a session token and redirect the user to the Chainlit page."""
+    token = serializer.dumps(email)
+    response = RedirectResponse(url="/chainlit", status_code=302)
+    response.set_cookie(COOKIE_NAME, token, httponly=True)
+    return response
+
+
 @app.post("/login", response_model=None)
 def login(
-    response: Response,
     request: Request,
     session: SessionDep,
     email: Annotated[str, Form()] = ...,
@@ -80,14 +87,9 @@ def login(
 
         return templates.TemplateResponse("login.html", {"request": request, "error": error_message}, status_code=401)
 
-    token = serializer.dumps(email)
-
-    response = RedirectResponse(url="/chainlit", status_code=302)
-    response.set_cookie(COOKIE_NAME, token, httponly=True)
-
     logger.info(f"User logged in successfully: {email}")
 
-    return response
+    return _create_session_and_redirect(email)
 
 
 @app.get("/register", response_class=HTMLResponse)
@@ -98,7 +100,6 @@ def register_page(request: Request, error: str | None = None) -> _TemplateRespon
 
 @app.post("/register", response_model=None)
 def register(
-    response: Response,
     request: Request,
     session: SessionDep,
     email: Annotated[str, Form()] = ...,
@@ -124,13 +125,9 @@ def register(
         session=session,
     )
 
-    token = serializer.dumps(email)
-    response = RedirectResponse(url="/chainlit", status_code=302)
-    response.set_cookie(COOKIE_NAME, token, httponly=True)
-
     logger.info(f"User registered successfully: {email}")
 
-    return response
+    return _create_session_and_redirect(email)
 
 
 @app.get("/", response_class=HTMLResponse)
