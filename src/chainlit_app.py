@@ -131,7 +131,7 @@ async def handle_message(message: cl.Message) -> None:
         and cl.chat_context.to_openai()[-2]
         and not cl.chat_context.to_openai()[-2]["content"].startswith("You have selected the schema:")
     ):
-        context = cl.chat_context.to_openai()[:-1]  # Exclude the last message which is the current one
+        context = cl.chat_context.to_openai()[-11:-1]  # Include up to 10 previous messages, omit the latest
 
     sql_query = await chainlit_controller.get_ai_sql_query(
         message,
