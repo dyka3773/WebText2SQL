@@ -1,2 +1,4 @@
-from .app_users import *
-from .user_connections import *
+from .app_users import AppUser
+from .user_connections import UserConnection
+
+__all__ = ["AppUser", "UserConnection"]

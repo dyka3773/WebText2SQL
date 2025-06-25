@@ -2,6 +2,8 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+LOGFILES_DIR_NAME = ".logs"
+
 
 def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     """
@@ -19,10 +21,9 @@ def setup_logger(name: str, level: int = logging.INFO) -> logging.Logger:
         "%(asctime)s - %(threadName)s:%(thread)d - %(module)s:%(lineno)d - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
-    LOGFILES_DIR_NAME = ".logs"
 
     if not Path(LOGFILES_DIR_NAME).exists():
-        Path(LOGFILES_DIR_NAME).mkdir(parents=True)
+        Path(LOGFILES_DIR_NAME).mkdir()
 
     handler = RotatingFileHandler(
         f"./{LOGFILES_DIR_NAME}/{name}.log",

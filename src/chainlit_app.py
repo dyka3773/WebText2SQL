@@ -1,5 +1,4 @@
 import os
-from copy import deepcopy
 
 import chainlit as cl
 from chainlit.types import ThreadDict
@@ -7,24 +6,18 @@ from dotenv import load_dotenv
 from fastapi import Request, Response
 from itsdangerous import BadSignature, SignatureExpired
 from sqlmodel import Session, create_engine
-from sshtunnel import SSHTunnelForwarder
 
 import custom_logging
 
 logger = custom_logging.setup_logger("webtext2sql")
 custom_logging.setup_logger("chainlit")
 
-from typing import TYPE_CHECKING
 
-import ai_controller
+
 import chainlit_controller
 import str_manipulation
-from connection_factory import get_db_controller
 from main import COOKIE_NAME, serializer
 from user_controllers import app_users
-
-if TYPE_CHECKING:
-    from db_controllers.base_db_controller import BaseDBController
 
 load_dotenv()
 
@@ -127,75 +120,22 @@ async def handle_message(message: cl.Message) -> None:
     """
     logger.debug(f"Received message: {message.content}")
 
-    # Step 1: Find Metadata from db according to the user
     conn_info = chainlit_controller.get_user_connection_info()
-
     schema = cl.user_session.get("curr_db_schema")
-    conn_details = deepcopy(conn_info)
 
-    logger.debug("Fetching metadata from the database")
+    db_controller, metadata, tunnel = chainlit_controller.get_db_controller_and_metadata(conn_info, schema)
+    sql_query = await chainlit_controller.get_ai_sql_query(message, conn_info, metadata, schema)
 
-    if conn_info.get("ssh"):
-        logger.debug("Using SSH tunnel for database connection")
-        tunnel = SSHTunnelForwarder(
-            ssh_address_or_host=(conn_info["ssh"]["ssh_host"], conn_info["ssh"]["ssh_port"]),
-            ssh_username=conn_info["ssh"]["ssh_user"],
-            ssh_password=conn_info["ssh"]["ssh_password"],
-            remote_bind_address=(conn_info["tcp"]["host"], conn_info["tcp"]["port"]),
-            local_bind_address=("127.0.0.1", 0),  # Let OS pick a free local port
-            logger=logger,
-        )
-        tunnel.start()
-
-        conn_details["tcp"]["host"] = "127.0.0.1"
-        conn_details["tcp"]["port"] = tunnel.local_bind_port
-
-    db_controller: BaseDBController = get_db_controller(
-        db_type=conn_info["type_of_db"],
-        tcp_details=conn_details["tcp"],
-    )
-
-    metadata: list[str] = db_controller.get_db_metadata(
-        schema=schema,
-    )
-
-    meta_str = "\n".join(metadata)
-
-    template = f"""This is my db structure:
-    {meta_str}
-
-    Please answer only with the SQL query (without any text formatting) that answers the following question:
-    {message.content}
-
-    Keep in mind that the database is a {conn_info["type_of_db"]} database and that the schema is {schema} and it should be used in the SQL query.
-    Unless explicitly stated, please limit the number of rows returned to 30.
-    """
-    # Step 2: Send user's query to AI & get the response from AI in the form of an SQL query
-    response = await ai_controller.get_ai_response(template)
-
-    logger.debug(f"AI's response: {response}")
-
-    # TODO @dyka3773: Wrap below until Step 4 in a function to make it cleaner
-    sql_query = str_manipulation.extract_sql_only(response)
-    logger.debug(f"Extracted SQL query: {sql_query}")
     if not sql_query:
         logger.error("The AI model did not return a valid SQL query.")
         await cl.Message(content="The AI model did not return a valid SQL query.").send()
         return
 
-    results: tuple[tuple] = ()
-    col_names: tuple[str] = ()
-
-    # Step 3: Execute the SQL query against the database
     results, col_names = db_controller.execute_query(sql_query)
 
-    # Close the SSH tunnel if it was used
-    if conn_info.get("type") == "ssh":
+    if tunnel:
         tunnel.stop()
         logger.debug("SSH tunnel closed")
 
-    # Step 4: Format the data into a user-friendly format before and sending it back to the user
     answer = str_manipulation.form_answer(results, col_names, sql_query)
-
-    # Step 5: Send the response back to the user
     await cl.Message(content=answer).send()
