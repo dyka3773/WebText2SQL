@@ -1,4 +1,4 @@
-from sqlmodel import Session, select
+from sqlmodel import Session, select, text
 
 from .models import UserConnection
 
@@ -42,7 +42,7 @@ def delete_user_connection_by_server_name(server_name: str, user_email: str, ses
     Args:
         server_name (str): The name of the server to delete the connection for.
         user_email (str): The email of the user whose connection is to be deleted.
-        session (Session): The SQLAlchemy session to use for the deletion.
+        session (Session): The SQLAlchemy session to use for the deletion. Defaults to None.
 
     Returns:
         UserConnection: The deleted UserConnection instance, or None if no connection was found.
@@ -55,6 +55,12 @@ def delete_user_connection_by_server_name(server_name: str, user_email: str, ses
     ).one()
 
     if user_connection:
+        user_id_query = text(f'SELECT "id" FROM public."User" WHERE "identifier" = \'{user_email}\'')
+        user_id = session.exec(user_id_query).one()
+        user_id = user_id[0]  # Extract the user ID from the tuple
+        thread_delete_statement = text(f'DELETE FROM public."Thread" WHERE "userId" = \'{user_id}\' AND "name" LIKE \'%{server_name}%\'')
+        session.exec(thread_delete_statement)
+
         session.delete(user_connection)
 
     session.commit()
