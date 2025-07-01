@@ -11,6 +11,10 @@ if TYPE_CHECKING:
 logger = logging.getLogger("webtext2sql")
 
 
+# As per #63, only MAX_RESULT_ROWS rows are returned to avoid overwhelming the user.
+MAX_RESULT_ROWS = 10
+
+
 def extract_sql_only(string: str) -> str:
     """
     Extract SQL query from the given string by applying a series of filters.
@@ -86,10 +90,13 @@ def form_answer(results: tuple[tuple], column_names: tuple[str], query: str) -> 
         logger.warning("No results found for the SQL query.")
         results = "No results found."
     else:
-        results = _create_markdown_results_table(results, column_names)
-        logger.debug(f"Formatted results: {results}")
+        # As per #63, only MAX_RESULT_ROWS rows are returned to avoid overwhelming the user.
+        displayed_results = results[:MAX_RESULT_ROWS]
 
-    answer = f"Here is the SQL query the AI model generated:\n```sql\n{query}\n```\n\nAnd here are the results:\n{results}"
+        md_results = _create_markdown_results_table(displayed_results, column_names)
+        logger.debug(f"Formatted results: {md_results}")
+
+    answer = f"Here is the SQL query the AI model generated:\n```sql\n{query}\n```\n\nAnd here are the results:\n{md_results}"
 
     logger.debug(f"Formatted answer: {answer}")
 
