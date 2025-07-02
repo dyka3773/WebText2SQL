@@ -13,7 +13,6 @@ logger = custom_logging.setup_logger("webtext2sql")
 custom_logging.setup_logger("chainlit")
 
 
-
 import chainlit_controller
 import str_manipulation
 from main import COOKIE_NAME, serializer
@@ -137,5 +136,6 @@ async def handle_message(message: cl.Message) -> None:
         tunnel.stop()
         logger.debug("SSH tunnel closed")
 
-    answer = str_manipulation.form_answer(results, col_names, sql_query)
-    await cl.Message(content=answer).send()
+    answer, elements = str_manipulation.form_answer(results, col_names, sql_query)
+
+    await cl.Message(content=answer, elements=elements).send()
