@@ -1,6 +1,6 @@
 services:
   postgres:
-    container_name: postgres_container
+    container_name: webtext2sql_postgres_container
     image: postgres:16
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -11,7 +11,7 @@ services:
     ports:
       - ${POSTGRES_PORT:-5432}:5432
   localstack:
-    container_name: localstack_container
+    container_name: webtext2sql_localstack_container
     image: localstack/localstack:latest
     environment:
       SERVICES: s3
