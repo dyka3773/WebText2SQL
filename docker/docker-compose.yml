@@ -18,18 +18,7 @@ services:
     ports:
       - 4566:4566
     volumes:
-      - ./tools/localstack-script.sh:/etc/localstack/init/ready.d/script.sh
+      - ../tools/localstack-script.sh:/etc/localstack/init/ready.d/script.sh
       - "/var/run/docker.sock:/var/run/docker.sock"
-  azurite:
-    container_name: azurite_container
-    image: mcr.microsoft.com/azure-storage/azurite
-    ports:
-      - "10000:10000"  # Blob service
-      - "10001:10001"  # Queue service
-      - "10002:10002"  # Table service
-    volumes:
-      - azurite_data:/data
-    command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0"
 volumes:
   postgres_data:
-  azurite_data:

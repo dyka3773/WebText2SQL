@@ -1,6 +1,6 @@
 [project]
 name = "webtext2sql"
-version = "1.0.0"
+version = "1.2.0"
 description = "This is a project performed as part of my BE thesis at the International Hellenic University. The project focuses on the development of WebText2SQL, a web-based application that allows users to formulate SQL queries using natural language. Using a Large Language Model (LLM), the application will automatically generate the corresponding SQL code and execute it against a Database Management System (DBMS). The system aims to allow users to execute queries through a friendly web interface to retrieve information without the need for SQL knowledge. In addition, the project will also examine aspects of accuracy, efficiency, and usability of the application."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -10,7 +10,7 @@ authors = [
 dependencies = [
     "aiohttp>=3.11.18",
     "asyncpg>=0.30.0",
-    "azure-storage-blob>=12.25.1",
+    "boto3>=1.39.1",
     "cachetools>=5.5.2",
     "chainlit>=2.5.5",
     "fastapi[all]>=0.115.12",
