@@ -1,0 +1,23 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: WebText2SQL
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Iraklis
+    family-names: Konsoulas
+    email: dyka3773@gmail.com
+    affiliation: International Hellenic University
+repository-code: 'https://github.com/dyka3773/WebText2SQL'
+abstract: >-
+  A web-based application that allows users to formulate and
+  run SQL queries using natural language against an existing
+  database of their preference.
+keywords:
+  - text2sql
+  - llm
+date-released: '2025-09-01'

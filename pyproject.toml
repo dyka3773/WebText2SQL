@@ -5,7 +5,7 @@ description = "This is a project performed as part of my BE thesis at the Intern
 readme = "README.md"
 requires-python = ">=3.13"
 authors = [
-    { name = "Iraklis Konsoulas", email = "dyka3773@gmail,com" },
+    { name = "Iraklis Konsoulas", email = "dyka3773@gmail.com" },
 ]
 dependencies = [
     "aiohttp>=3.11.18",
