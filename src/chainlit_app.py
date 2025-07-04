@@ -123,7 +123,31 @@ async def handle_message(message: cl.Message) -> None:
     schema = cl.user_session.get("curr_db_schema")
 
     db_controller, metadata, tunnel = chainlit_controller.get_db_controller_and_metadata(conn_info, schema)
-    sql_query = await chainlit_controller.get_ai_sql_query(message, conn_info, metadata, schema)
+
+    db_engine = create_engine(os.getenv("DATABASE_URL"))
+    with Session(db_engine) as session:
+        allowed = app_users.is_user_allowed_to_use_chat_context(
+            cl.user_session.get("user").identifier,
+            session,
+        )
+
+    context = None
+
+    if (  # Check if the chat context is not empty, it is not the start of a new conversation and the user is allowed to use chat context
+        allowed
+        and cl.chat_context.to_openai()
+        and cl.chat_context.to_openai()[-2]
+        and not cl.chat_context.to_openai()[-2]["content"].startswith("You have selected the schema:")
+    ):
+        context = cl.chat_context.to_openai()[-11:-1]  # Include up to 10 previous messages, omit the latest
+
+    sql_query = await chainlit_controller.get_ai_sql_query(
+        message,
+        conn_info,
+        metadata,
+        schema,
+        context,
+    )
 
     if not sql_query:
         logger.error("The AI model did not return a valid SQL query.")
