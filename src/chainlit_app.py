@@ -124,10 +124,18 @@ async def handle_message(message: cl.Message) -> None:
 
     db_controller, metadata, tunnel = chainlit_controller.get_db_controller_and_metadata(conn_info, schema)
 
+    db_engine = create_engine(os.getenv("DATABASE_URL"))
+    with Session(db_engine) as session:
+        allowed = app_users.is_user_allowed_to_use_chat_context(
+            cl.user_session.get("user").identifier,
+            session,
+        )
+
     context = None
 
-    if (  # Check if the chat context is not empty and it is not the start of a new conversation
-        cl.chat_context.to_openai()
+    if (  # Check if the chat context is not empty, it is not the start of a new conversation and the user is allowed to use chat context
+        allowed
+        and cl.chat_context.to_openai()
         and cl.chat_context.to_openai()[-2]
         and not cl.chat_context.to_openai()[-2]["content"].startswith("You have selected the schema:")
     ):

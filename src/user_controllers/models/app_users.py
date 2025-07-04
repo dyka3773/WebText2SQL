@@ -14,3 +14,4 @@ class AppUser(SQLModel, table=True):
     email: str = Field(default=None, nullable=False, index=True, unique=True)
     username: str = Field(default=None, nullable=False)
     hashed_password: str = Field(default=None, nullable=False)
+    chat_context_allowed: bool = Field(default=True, nullable=False)

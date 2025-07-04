@@ -45,3 +45,18 @@ def app_user_exists(email: str, session: Session = None) -> bool:
         bool: True if the user exists, False otherwise.
     """
     return get_app_user_by_email(email, session) is not None
+
+
+def is_user_allowed_to_use_chat_context(email: str, session: Session = None) -> bool:
+    """
+    Check if a user is allowed to use chat context.
+
+    Args:
+        email (str): The email address of the user.
+        session (Session, optional): The SQLAlchemy session to use for the query. Defaults to None.
+
+    Returns:
+        bool: True if the user is allowed to use chat context, False otherwise.
+    """
+    user = get_app_user_by_email(email, session)
+    return user.chat_context_allowed if user else False
