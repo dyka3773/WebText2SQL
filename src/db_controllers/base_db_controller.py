@@ -80,6 +80,8 @@ class BaseDBController(ABC):
             logger.exception("An error occurred")
             # TODO @dyka3773: In case of an sql error, we should return it to the user instead of just logging it.
             return (), ()
+        finally:
+            self.connection.commit()  # Commit the transaction if needed
 
     @abstractmethod
     def _get_db_tables_for_user(self, schema: str) -> list[str]:
