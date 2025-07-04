@@ -1,14 +1,22 @@
 import logging
 from typing import TYPE_CHECKING
 
+import chainlit as cl
+import pandas as pd
 from cachetools.func import ttl_cache
+from chainlit.element import Element as cl_Element
 
 from caching_configs import CACHE_MAX_SIZE, CACHE_TTL
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+
 logger = logging.getLogger("webtext2sql")
+
+
+# As per #63, only MAX_RESULT_ROWS rows are returned to avoid overwhelming the user.
+MAX_RESULT_ROWS = 10
 
 
 def extract_sql_only(string: str) -> str:
@@ -70,7 +78,7 @@ def _remove_empty_lines(string: str) -> str:
     return "\n".join(lines)
 
 
-def form_answer(results: tuple[tuple], column_names: tuple[str], query: str) -> str:
+def form_answer(results: tuple[tuple], column_names: tuple[str], query: str) -> tuple[str, list[cl_Element]]:
     """
     Format the results before sending them back to the user.
 
@@ -80,20 +88,38 @@ def form_answer(results: tuple[tuple], column_names: tuple[str], query: str) -> 
         query (str): The SQL query that was executed.
 
     Returns:
-        str: Formatted string representation of the results and the SQL query.
+        tuple[str, list[cl_Element]]: A tuple containing the formatted answer and a list of Chainlit elements.
     """
+    elements = None
+    md_results = ""
     if not results:
         logger.warning("No results found for the SQL query.")
-        results = "No results found."
+        md_results = "\nNo results found."
     else:
-        results = _create_markdown_results_table(results, column_names)
-        logger.debug(f"Formatted results: {results}")
+        results_df = pd.DataFrame(results, columns=column_names)
 
-    answer = f"Here is the SQL query the AI model generated:\n```sql\n{query}\n```\n\nAnd here are the results:\n{results}"
+        # As per #63, only MAX_RESULT_ROWS rows are returned to avoid overwhelming the user.
+        md_top_results = results_df.head(MAX_RESULT_ROWS).to_markdown(index=False)
+
+        elements = [
+            cl.File(
+                name="data_table.csv",
+                content=results_df.to_csv(index=False),
+                display="inline",
+            ),
+            cl.Text(
+                content=md_top_results,
+                display="inline",
+            ),
+        ]
+
+        logger.debug(f"Formatted results: {md_top_results}")
+
+    answer = f"Here is the SQL query the AI model generated:\n```sql\n{query}\n```\n\nAnd here are the results:{md_results}"
 
     logger.debug(f"Formatted answer: {answer}")
 
-    return answer
+    return answer, elements
 
 
 def optimize_ddl_for_ai(ddl: str) -> str:
@@ -131,4 +157,5 @@ def _create_markdown_results_table(results: tuple[tuple], column_names: tuple[st
     rows = ["| " + " | ".join([str(item) for item in row]) + " |" for row in results]
 
     # Combine header, separator, and rows
+    return "\n".join([header, separator, *rows])
     return "\n".join([header, separator, *rows])
