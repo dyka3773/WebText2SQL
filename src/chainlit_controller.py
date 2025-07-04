@@ -508,8 +508,7 @@ async def get_ai_sql_query(message: cl.Message, conn_info: dict, metadata: list[
     {message.content}
 
     Keep in mind that the database is a {conn_info["type_of_db"]} database and that the schema is {schema} and it should be used in the SQL query.
-    Unless explicitly stated, please limit the number of rows returned to 30.
-    {context_str}
+    Unless explicitly stated, please do not limit the number of rows returned.
     """
     logger.info(f"Sending the following template to the AI model:\n{template}")
 

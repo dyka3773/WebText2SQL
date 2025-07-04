@@ -152,5 +152,6 @@ async def handle_message(message: cl.Message) -> None:
         tunnel.stop()
         logger.debug("SSH tunnel closed")
 
-    answer = str_manipulation.form_answer(results, col_names, sql_query)
-    await cl.Message(content=answer).send()
+    answer, elements = str_manipulation.form_answer(results, col_names, sql_query)
+
+    await cl.Message(content=answer, elements=elements).send()
