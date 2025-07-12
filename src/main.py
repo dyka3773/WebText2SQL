@@ -37,12 +37,12 @@ serializer = URLSafeTimedSerializer(SECRET_KEY)
 db_engine = create_engine(os.getenv("DATABASE_URL"))
 
 
-def get_session() -> Generator[Session, Any]:
+def get_db_session() -> Generator[Session, Any]:
     with Session(db_engine) as session:
         yield session
 
 
-SessionDep = Annotated[Session, Depends(get_session)]
+DBSessionDep = Annotated[Session, Depends(get_db_session)]
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -52,6 +52,10 @@ app.mount("/public", StaticFiles(directory="public"), name="public")
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, error: str | None = None) -> _TemplateResponse:
     """Render the login page with an optional error message."""
+    # If user is already logged in, redirect to Chainlit
+    if request.cookies.get(COOKIE_NAME):
+        return RedirectResponse(url="/chainlit", status_code=302)
+
     return templates.TemplateResponse("login.html", {"request": request, "error": error})
 
 
@@ -66,7 +70,7 @@ def _create_session_and_redirect(email: str) -> Response:
 @app.post("/login", response_model=None)
 def login(
     request: Request,
-    session: SessionDep,
+    session: DBSessionDep,
     email: Annotated[str, Form()] = ...,
     password: Annotated[str, Form()] = ...,
 ) -> _TemplateResponse | RedirectResponse:
@@ -101,7 +105,7 @@ def register_page(request: Request, error: str | None = None) -> _TemplateRespon
 @app.post("/register", response_model=None)
 def register(
     request: Request,
-    session: SessionDep,
+    db_session: DBSessionDep,
     email: Annotated[str, Form()] = ...,
     password: Annotated[str, Form()] = ...,
 ) -> _TemplateResponse | RedirectResponse:
@@ -110,7 +114,7 @@ def register(
         error_message = "Email and password are required"
         return templates.TemplateResponse("register.html", {"request": request, "error": error_message}, status_code=400)
 
-    if app_users.app_user_exists(email=email, session=session):
+    if app_users.app_user_exists(email=email, session=db_session):
         error_message = "User already exists"
         logger.warning(f"Registration failed: User already exists with email {email}")
         return templates.TemplateResponse("register.html", {"request": request, "error": error_message}, status_code=400)
@@ -122,7 +126,7 @@ def register(
             username=email.split("@")[0],
             hashed_password=hash_password(password),
         ),
-        session=session,
+        session=db_session,
     )
 
     logger.info(f"User registered successfully: {email}")
