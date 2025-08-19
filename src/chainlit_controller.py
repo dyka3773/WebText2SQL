@@ -508,6 +508,7 @@ async def get_ai_sql_query(message: cl.Message, conn_info: dict, metadata: list[
     {message.content}
 
     Keep in mind that the database is a {conn_info["type_of_db"]} database and that the schema is {schema} and it should be used in the SQL query.
+    {"Add quotes around the table and column names to avoid SQL syntax errors." if conn_info["type_of_db"] == "postgres" else ""}
     Unless explicitly stated, please do not limit the number of rows returned.
     {context_str}
     """
