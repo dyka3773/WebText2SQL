@@ -1,0 +1,63 @@
+services:
+  webtext2sql-app:
+    build: .
+    container_name: webtext2sql_app
+    ports:
+      - "8000:8000" # TODO: Confirm with @stougsch
+    # environment:
+    #   - CURRENT_DOMAIN=webtext2sql_app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+    restart: unless-stopped
+    volumes:
+      # Mount logs directory for persistent logs
+      - ./logs:/app/src/.logs
+      # Mount environment variables to be able to change them without rebuilding the image
+      - ./src/.env:/app/src/.env
+    networks:
+      - webtext2sql-network
+
+  postgres:
+    container_name: webtext2sql_postgres
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./SQL:/docker-entrypoint-initdb.d/
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-root}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-root} -d ${POSTGRES_DB:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - webtext2sql-network
+
+  localstack:
+    container_name: webtext2sql_localstack
+    image: localstack/localstack:latest
+    environment:
+      SERVICES: s3
+    ports:
+      - "${LOCALSTACK_PORT:-4566}:4566"
+    volumes:
+      - ./tools/localstack-script.sh:/etc/localstack/init/ready.d/script.sh
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    restart: unless-stopped
+    networks:
+      - webtext2sql-network
+
+volumes:
+  postgres_data:
+
+networks:
+  webtext2sql-network:
+    driver: bridge
