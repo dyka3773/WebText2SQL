@@ -27,7 +27,7 @@
   <script>
     const global = globalThis;
   </script>
-  <link rel="stylesheet" crossorigin="" href="http://localhost/static/style.min.css">
+  <link rel="stylesheet" crossorigin="" href="{{ url_for('static', path='style.min.css') }}">
   <style type="text/css">
     html[dir=ltr],
     [data-sonner-toaster][dir=ltr] {
@@ -651,7 +651,7 @@
     <div class="grid min-h-svh lg:grid-cols-2">
       <div class="flex flex-col gap-4 p-6 md:p-10">
         <div class="flex justify-center gap-2 md:justify-start">
-          <a href="/"><img src="http://localhost/public/logo_dark.png" alt="logo" class="logo w-[150px]"></a>
+          <a href="/"><img src="{{ url_for('public', path='logo_dark.png') }}" alt="logo" class="logo w-[150px]"></a>
         </div>
         <div class="flex flex-1 items-center justify-center">
           <div class="w-full max-w-xs">
@@ -734,7 +734,7 @@
         </div>
       </div>
       <div class="relative hidden bg-muted lg:block overflow-hidden"><img
-          src="http://localhost/public/custom-background.png" alt="Image"
+          src="{{ url_for('public', path='custom-background.png') }}" alt="Image"
           class="absolute inset-0 h-full w-full object-cover brightness-[0.2] grayscale"></div>
     </div>
     <div class="bg-[hsl(var(--background))] items-center justify-center fixed size-full p-2 top-0 hidden"><svg
